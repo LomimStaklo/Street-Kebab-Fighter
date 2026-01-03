@@ -57,6 +57,6 @@ void menu_render(void *ctx, game_t *game)
     menu_ctx_t *menu = (menu_ctx_t *)ctx;
 
     SDL_RenderCopy(game->renderer, game->media.bg_img, NULL, NULL);
-    render_textbox(game->renderer, game->media.atlas, &menu->item1, game->media.ui2_img);
+    render_textbox(game->renderer, game->media.atlas, &menu->item1, game->media.ui1_img);
     render_display(game->renderer);
 }
