@@ -2,11 +2,13 @@ import os
 import sys
 from time import time
 
+# STREET KEBAB FIGHTER
+
 # ====== CONFIG ======= #
-cc       = "gcc" # clang
-src      = "src/main.c src/game.c src/systems.c"
+cc       = "clang" # clang
+src      = "src/*.c"
 out      = "main.exe"
-flags    = "-Wall -Wextra -Wenum-compare -pedantic -Wshadow -std=c99 -s -fstack-protector" # -mwindows
+flags    = "-Wall -Wextra -Wno-#warnings -pedantic -Wshadow -std=c99 -g -fstack-protector -Wno-unused-parameter -O1" # -mwindows
 lib_path = "src/lib"
 inc_path = "src/include"
 libs     = "-lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf"
@@ -15,13 +17,13 @@ libs     = "-lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf"
 def run_time(func) -> None:
     _start_t = time()
     func()
-    duration =  time() - _start_t
+    duration = time() - _start_t
     print(f"[i] {duration:.2f} sec")
 
 def run_cmd(cmd: str, msg: str) -> None:
     print("[*]", msg, "...")
     if os.system(cmd): 
-        print("[!]", msg,"failed")
+        print("[!]", msg, "failed")
         exit(1)
 
 # ====== VARIABLES ======= # 

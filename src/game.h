@@ -2,91 +2,120 @@
 #define _GAME_H
 
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_ttf.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdbool.h>
+#include "machine.h"
 
-#define _LOG_FILE stderr
-#define RET_VOID
+struct font_atlas_t; /* from renderer.h */
 
-#define _PP_RED      "\033[31m" 
-#define _PP_AEND     "\033[0m" 
+typedef enum actions_t
+{
+    ACTINO_NONE = -1, 
+    ACTINO_UP,
+    ACTINO_DOWN,
+    ACTINO_LEFT,
+    ACTINO_RIGHT,
+    ACTINO_SLAP,
+    ACTINO_PUNCH,
+    ACTINO_KICK,
+    ACTINO_COUNT,
+} actions_t;
 
-#define log_error_(__expr_, __return_, __fmt_, ...) do {        \
-    if (__expr_) {                                              \
-        fprintf(_LOG_FILE, _PP_RED"[ERROR]"_PP_AEND" %s:%d:%s(): " __fmt_ "\n", \
-        __FILE__, __LINE__, __func__, ##__VA_ARGS__);           \
-        return __return_; }                                     \
-    } while (0)
+typedef struct player_t
+{
+    SDL_Scancode keybinds[ACTINO_COUNT];
+    actions_t act_history[32];
+    uint32_t act_frames[32];
+    uint8_t act_count;
+} player_t;
 
-typedef enum {
-    LAYER_BACKGROUND,
-    LAYER_BACKGROUND2,
-    LAYER_ENTITY,
-    LAYER_TEXT,
-    LAYER_COUNT
-} render_layer_t;
-
-typedef struct {
-    SDL_Texture *texture;
-    SDL_Rect srcrect, dstrect;
-    render_layer_t layer;
-} render_tex_t;
-
-typedef struct {
-    SDL_Rect dstrect;
-    SDL_Color color;
-    char *text;
-    struct {
-        uint16_t w, h;
-    } chr_size;
-} textbox_t;
-
-typedef struct {
-    SDL_Texture *texture;
-    int32_t font_height;
-    struct glyph {
-        SDL_Rect src;
-        //int32_t advance; 
-    } glyphs[128];
-} font_atlas_t;
-
-typedef struct {
-    font_atlas_t atlas;
-    SDL_Texture *background_img;
+typedef struct media_t 
+{
+    struct font_atlas_t *atlas;
+    SDL_Texture *ui1_img; 
+    SDL_Texture *bg_img;
 } media_t;
 
-typedef struct {
+typedef enum mouse_button_t 
+{
+    MOUSE_BUTTON_LEFT,
+    MOUSE_BUTTON_MIDDLE,
+    MOUSE_BUTTON_RIGHT,
+    MOUSE_BUTTON_COUNT,
+} mouse_button_t;
+
+typedef struct input_t
+{
+    struct {
+        bool down;
+        bool pressed;
+        bool released;
+    } keys[SDL_NUM_SCANCODES];
+    struct {
+        struct {
+            bool down;
+            bool pressed;
+            bool released;
+        } buttons[MOUSE_BUTTON_COUNT];
+
+        int32_t x, y;
+        bool is_active;
+    } mouse;
+} input_t;
+
+
+typedef struct game_t 
+{
+    state_machine_t machine;
+    input_t input;
+    media_t media;
+    player_t players[2];
+
     SDL_Renderer *renderer;
     SDL_Window *window;
-    SDL_Event event;
-    media_t media;
     
-    const uint8_t *keyboard;
-    bool running;
-    struct {
+    struct display_t 
+    {
         int32_t w, h;
-    } position_win;
-    struct {
-        bool is_active;
-        uint32_t button;
-        int32_t x, y;
-    } mouse;
-    struct game_time {
+        uint32_t fullscreen;
+    } display;
+    
+    struct game_time_t 
+    {
         uint32_t frame_elapsed;
         uint32_t frame_start;
         uint32_t frame_counter;
         float frame_rate;
     } time;
+
+    bool running;
 } game_t;
 
+
+#define sizeof_arr(arr) (sizeof((arr)) / sizeof((arr)[0]))
+
+// Textures get destroyed on games exit 
+typedef struct static_textures_t
+{
+    SDL_Texture *textures[64];
+    uint32_t tex_count;
+} static_textures_t;
+
+extern static_textures_t static_tex_buff;
+static inline bool set_static_texture(SDL_Texture *tex) 
+{
+    if (static_tex_buff.tex_count < sizeof_arr(static_tex_buff.textures))
+    {
+        static_tex_buff.textures[static_tex_buff.tex_count++] = tex;
+        return true;
+    } else 
+        return false;
+}
+
 bool init_game(game_t *game);
-void no_game(game_t *game, int exit_code);
+void no_game(game_t *game, int32_t exit_code);
 bool load_media(game_t *game);
 
-font_atlas_t create_atlas(SDL_Renderer *renderer, const char *font_path);
-void render_text(SDL_Renderer *renderer, font_atlas_t *atlas, char *text, SDL_Rect text_rect, SDL_Color col);
+void handle_all_events(game_t *game);
 
 #endif /* _GAME_H */
