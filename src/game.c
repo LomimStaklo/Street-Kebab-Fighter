@@ -1,80 +1,72 @@
+#define INPUT_IMPL
+#define STATE_IMPL
+#define PLAY_STATE_IMPL
+#define RENDERER_IMPL
+#define CHARACTERS_IMPL
+#include "characters.h"
 #include "game.h"
-#include "loging.h"
-#include "renderer.h"
+
+#include <utils/loging.h>
+#include <utils/macros.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
 
-#define WIN_TITLE       "Blidinje"
-#define WIN_HIGHT       600
-#define WIN_WIDTH       800
-#define WIN_FLAGS       (SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE) // | SDL_WINDOW_BORDERLESS
+#define WIN_FLAGS       (SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE /*| SDL_WINDOW_FULLSCREEN_DESKTOP*/)
 #define IMAGE_FLAGS     (IMG_INIT_JPG | IMG_INIT_PNG)
 #define RENDERER_FLAGS  (SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC)
-#define FPS             60
-
-static_textures_t static_tex_buff = {0};
-
-void destroy_static_textures(void) 
-{
-    for (size_t i = 0; i < static_tex_buff.tex_count; i++){
-        if (static_tex_buff.textures[i]) {
-            SDL_DestroyTexture(static_tex_buff.textures[i]);
-            //printf("DEL TEX: %p\n", tex_buff.textures[i]);
-        }
-    }
-}
 
 bool init_game(game_t *game)
 {
-    log_error_( SDL_Init(SDL_INIT_EVERYTHING) < 0   , false, "SDL init: %s", SDL_GetError() );
-    log_error_( IMG_Init(IMAGE_FLAGS) != IMAGE_FLAGS, false, "IMG init: %s", SDL_GetError() );
-    log_error_( TTF_Init()                          , false, "TTF init: %s", SDL_GetError() ); 
+    if (SDL_Init(SDL_INIT_EVERYTHING) < 0) { 
+        game_log( "ERROR", "SDL init: %s", SDL_GetError() );
+        return false;
+    } 
+    if (IMG_Init(IMAGE_FLAGS) != IMAGE_FLAGS) { 
+        game_log( "ERROR", "IMG init: %s", SDL_GetError() );
+        return false;
+    }
+    if (TTF_Init()) { 
+        game_log( "ERROR", "TTF init: %s", SDL_GetError() );
+        return false;
+    }
 
     game->window = SDL_CreateWindow
     (
-        WIN_TITLE,
+        "Street Kebab Fajter",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
-        WIN_WIDTH, WIN_HIGHT,
+        800, 600,
         WIN_FLAGS
     );
-    log_error_( !game->window, false, "SDL window: %s", SDL_GetError() );  
+    if (!game->window) { 
+        game_log( "ERROR", "SDL window: %s", SDL_GetError() );
+        return false;
+    } 
+    if (!init_renderer(&game->renderer, game->window)) {
+        game_log( "ERROR", "SDL renderer: %s", SDL_GetError() );
+        return false; 
+    }
+    // SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     
-    game->renderer = SDL_CreateRenderer(game->window, -1, RENDERER_FLAGS);
-    log_error_( !game->renderer, false, "SDL renderer: %s", SDL_GetError() ); 
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+    if (!init_player_keybinds(game->players, &game->input)) {
+        game_log( "ERROR", "Keys not initialised count: %d", (INPUT_COUNT - 1));
+        return false;
+    }
 
-    init_state_machine(&game->machine);
+    init_play_state(&game->play_state, &game->renderer, game->players);
+    init_state_machine(&game->play_state.state);
 
-    game->display.w = WIN_WIDTH;
-    game->display.h = WIN_HIGHT;
-    game->time.frame_rate = 1000.0f / FPS;
+    game->time.target_frame_ms = 1000 / 60; // FPS ~60
     game->input.mouse.is_active = SDL_ShowCursor(SDL_ENABLE);
     game->running = true; 
-
-    return true;
-}
-
-static font_atlas_t f_atlas = {0};
-bool load_media(game_t *game)
-{
-    game->media.atlas = &f_atlas;
-    create_atlas(game->media.atlas, game->renderer, "./fonts/jjba.ttf");
-    game->media.ui1_img = IMG_LoadTexture(game->renderer, "./images/ui1.png");
-    game->media.bg_img = IMG_LoadTexture(game->renderer, "./images/blidinje.jpg");
     
-    set_static_texture(game->media.atlas->texture);
-    set_static_texture(game->media.ui1_img);
-    set_static_texture(game->media.bg_img);
-
     return true;
 }
 
 void no_game(game_t *game, int32_t exit_code)
 {
     //unload_media(game);
-    destroy_static_textures();
-    SDL_DestroyRenderer(game->renderer);
+    destroy_renderer(&game->renderer);
     SDL_DestroyWindow(game->window);
 
     TTF_Quit();
@@ -83,24 +75,34 @@ void no_game(game_t *game, int32_t exit_code)
     exit(exit_code);
 }
 
-void handle_all_events(game_t *game)
+void handle_game_time(game_time_t *time)
 {
     // Delta time handleing
-    game->time.frame_elapsed = SDL_GetTicks() - game->time.frame_start;
-    
-    if (game->time.frame_elapsed < game->time.frame_rate)
-        SDL_Delay(game->time.frame_rate - game->time.frame_elapsed);
-    
-    game->time.frame_start = SDL_GetTicks(); 
-    game->time.frame_counter++;
+    uint32_t now_ticks = SDL_GetTicks();
 
-    // Input buffer clearing
-    for (uint32_t i = 0; i < SDL_NUM_SCANCODES; i++)
+    time->frame_elapsed = now_ticks - time->frame_start;
+    time->delta_time = time->frame_elapsed / 1000.0f; /* delta time in seconds */
+
+    if (time->delta_time > 0.05f)
+        time->delta_time = 0.05f;
+        
+    if (time->frame_elapsed < time->target_frame_ms)
+        SDL_Delay(time->target_frame_ms - time->frame_elapsed);
+
+    /* prepare for next frame */
+    time->frame_start = SDL_GetTicks();
+    time->frame_counter++;
+}
+
+void handle_SDL_events(game_t *game)
+{
+    // Input buffer clearing 
+    for_range_i(SDL_NUM_SCANCODES)
     {
         game->input.keys[i].pressed  = false;
         game->input.keys[i].released = false;
     }
-    for (uint32_t i = 0; i < MOUSE_BUTTON_COUNT; i++)
+    for_range_i(MOUSE_BUTTON_COUNT)
     {
         game->input.mouse.buttons[i].pressed  = false;
         game->input.mouse.buttons[i].released = false;
@@ -126,11 +128,10 @@ void handle_all_events(game_t *game)
                 if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) game->running = false; 
                 if (event.key.keysym.scancode == SDL_SCANCODE_F11)
                 {
-                    game->display.fullscreen =
-                        (game->display.fullscreen == 0) 
-                        ? SDL_WINDOW_FULLSCREEN_DESKTOP
-                        : 0;
-                    SDL_SetWindowFullscreen(game->window, game->display.fullscreen);
+                    if (SDL_GetWindowFlags(game->window) & SDL_WINDOW_FULLSCREEN_DESKTOP)
+                        SDL_SetWindowFullscreen(game->window, 0);
+                    else
+                        SDL_SetWindowFullscreen(game->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
                 }
 
                 game->input.keys[event.key.keysym.scancode].down     = false;
@@ -162,13 +163,9 @@ void handle_all_events(game_t *game)
                     game->input.mouse.buttons[button].released = true;
                 }
                 break;
-            
-            case SDL_WINDOWEVENT:  
-                SDL_GetWindowSize(game->window, &game->display.w, &game->display.h); 
-                break;
 
             case SDL_QUIT: 
-                game->running = false; 
+                game->running = false;
                 break;
 
             default: break;
