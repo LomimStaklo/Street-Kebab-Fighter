@@ -9,7 +9,7 @@
 //  DECLARATION
 // =============
 
-struct renderer_t;
+struct renderer_t; /** From renderer.h */
 
 typedef struct state_t
 {

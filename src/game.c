@@ -3,6 +3,8 @@
 #define PLAY_STATE_IMPL
 #define RENDERER_IMPL
 #define CHARACTERS_IMPL
+#define FAJTER_IMPL
+#include "fajter.h"
 #include "characters.h"
 #include "game.h"
 
@@ -17,6 +19,8 @@
 
 bool init_game(game_t *game)
 {
+    memset((void *)game, 0, sizeof(game_t));
+
     if (SDL_Init(SDL_INIT_EVERYTHING) < 0) { 
         game_log( "ERROR", "SDL init: %s", SDL_GetError() );
         return false;
@@ -72,7 +76,7 @@ void no_game(game_t *game, int32_t exit_code)
     TTF_Quit();
     IMG_Quit();
     SDL_Quit();
-    exit(exit_code);
+    exit(exit_code); 
 }
 
 void handle_game_time(game_time_t *time)

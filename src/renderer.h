@@ -176,7 +176,8 @@ bool renderer_unload_texture(renderer_t *renderer, texture_handle_t tex_handle)
 
 texture_t renderer_create_subtexture(texture_handle_t tex_handle, SDL_Rect src)
 {
-    texture_t tex_tile = {
+    texture_t tex_tile = 
+    {
         .handle = tex_handle,
         .src = src,
     };

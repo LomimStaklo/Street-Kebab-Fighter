@@ -1,6 +1,6 @@
 #include "game.h"
 #include "state.h"
-#include <utils/loging.h>
+//#include <utils/loging.h>
 
 int main(int argc, char **argv) 
 {
@@ -16,6 +16,7 @@ int main(int argc, char **argv)
     {
         handle_game_time(&game.time);
         handle_SDL_events(&game);
+        
         play_update(&game.play_state, game.time.delta_time);
         play_render(&game.play_state, &game.renderer);
     }
