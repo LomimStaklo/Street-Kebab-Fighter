@@ -23,16 +23,29 @@ typedef struct button_state_t
 
 typedef enum input_actions_t
 {
-    INPUT_UP = 0,
-    INPUT_DOWN,
-    INPUT_RIGHT,
-    INPUT_LEFT,
-    INPUT_LIGHT,
-    INPUT_MEDIUM,
-    INPUT_HARD,
-    INPUT_HEAVY,
-    INPUT_COUNT,
+    INPUT_NONE   = 0, 
+    INPUT_UP     = 1 << 0,
+    INPUT_DOWN   = 1 << 1,
+    INPUT_RIGHT  = 1 << 2,
+    INPUT_LEFT   = 1 << 3,
+    INPUT_LIGHT  = 1 << 4,
+    INPUT_MEDIUM = 1 << 5,
+    INPUT_HEAVY  = 1 << 6,
+    
+    INPUT_BLOCK  = INPUT_LIGHT | INPUT_LEFT,  
 } input_actions_t;
+
+typedef enum button_actions_t
+{
+    BUTTON_UP = 0,
+    BUTTON_DOWN,
+    BUTTON_RIGHT,
+    BUTTON_LEFT,
+    BUTTON_LIGHT,
+    BUTTON_MEDIUM,
+    BUTTON_HEAVY,
+    BUTTON_COUNT,
+} button_actions_t;
 
 typedef enum mouse_button_t 
 {
@@ -56,11 +69,18 @@ typedef struct input_t
 typedef struct player_t
 {
     fighter_t fighter; 
-    button_state_t *keybinds[INPUT_COUNT];
+    button_state_t *keybinds[BUTTON_COUNT];
+    
+    uint8_t input_down;     // Bitfield for input_actions_t
+    uint8_t input_pressed;  // Bitfield for input_actions_t
+    uint8_t input_released; // Bitfield for input_actions_t
+
+    uint8_t actions_history[8]; // recoded move
 } player_t;
 
-bool init_player_keybinds(player_t player[2], input_t *input);
-bool did_player_press(player_t *player, input_actions_t action);
+//bool init_player_keybinds(player_t player[2], input_t *input);
+input_actions_t player_down_input(player_t *player);  // Gets the "down" input bitflags  
+void player_record_input(player_t *player);
 
 // ================
 //  IMPLEMENTATION
@@ -70,9 +90,38 @@ bool did_player_press(player_t *player, input_actions_t action);
 
 #include <utils/macros.h>
 
-bool did_player_press(player_t *player, input_actions_t act)
+input_actions_t player_down_input(player_t *player)
 {
-    return (player->keybinds[act]->pressed); 
+    return player->input_down; 
+}
+
+void player_record_input(player_t *player)
+{
+    player->input_down     = INPUT_NONE; 
+    player->input_pressed  = INPUT_NONE;
+    player->input_released = INPUT_NONE;
+    
+    for (uint32_t i = 0, flag = 1; i < BUTTON_COUNT; i++, flag <<= 1)
+    {
+        player->input_down     |= player->keybinds[i]->down * flag;
+        player->input_pressed  |= player->keybinds[i]->pressed * flag;
+        player->input_released |= player->keybinds[i]->released * flag;
+    }
+    /* 
+    system("cls");
+    game_log("INFO", "\n inp = %d\n"   
+        "INPUT_UP     = %b\n"
+        "INPUT_DOWN   = %b\n"
+        "INPUT_RIGHT  = %b\n"
+        "INPUT_LEFT   = %b\n"
+        "INPUT_LIGHT  = %b\n"
+        "INPUT_MEDIUM = %b\n"
+        "INPUT_HEAVY  = %b\n", player->input_down,
+        player->input_down & INPUT_UP, player->input_down & INPUT_DOWN, player->input_down & INPUT_RIGHT, 
+        player->input_down & INPUT_LEFT, player->input_down & INPUT_LIGHT, player->input_down & INPUT_MEDIUM,
+        player->input_down & INPUT_HEAVY
+    );
+    */
 }
 
 bool init_player_keybinds(player_t player[2], input_t *input)
@@ -97,13 +146,13 @@ bool init_player_keybinds(player_t player[2], input_t *input)
         SDL_SCANCODE_O,
         SDL_SCANCODE_P,
     };
-    if (sizeof_arr(keys_p1) < (INPUT_COUNT - 1) || 
-        sizeof_arr(keys_p2) < (INPUT_COUNT - 1))
+    if (lenof_arr(keys_p1) != (BUTTON_COUNT) || 
+        lenof_arr(keys_p2) != (BUTTON_COUNT))
     {
         return false;
     }
 
-    for_range_i(INPUT_COUNT)
+    for_range_i(BUTTON_COUNT)
     {
         player[0].keybinds[i] = &input->keys[keys_p1[i]];
         player[1].keybinds[i] = &input->keys[keys_p2[i]];

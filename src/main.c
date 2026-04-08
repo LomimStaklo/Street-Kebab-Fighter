@@ -1,6 +1,7 @@
 #include "game.h"
-#include "state.h"
+//#include <SDL2/SDL_image.h>
 //#include <utils/loging.h>
+//#include <utils/macros.h>
 
 int main(int argc, char **argv) 
 {
@@ -9,8 +10,11 @@ int main(int argc, char **argv)
 
     game_t game = {0};
     
-    if ( !(init_game(&game)) ) no_game(&game, EXIT_FAILURE);
-    play_on_enter(&game.play_state);
+    if ( !(init_game(&game)) ) 
+        no_game(&game, EXIT_FAILURE);
+    
+    init_play_state(&game.play_state, &game.renderer, game.players);
+    play_on_enter(&game.play_state);    
 
     while (game.running)
     {

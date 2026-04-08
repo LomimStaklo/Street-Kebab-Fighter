@@ -6,7 +6,6 @@
 // #define PLAY_STATE_IMPL
 
 #include "input.h"
-#include "state.h"
 #include "renderer.h"
 
 // =============
@@ -15,17 +14,17 @@
 
 typedef struct play_state_t
 {
-    state_t state;
-    texture_t background, forground;
+    //state_t state;
+    texture_t background;
 
     player_t *player_right;
     player_t *player_left;
 } play_state_t;
 
-void init_play_state(play_state_t *play_state, renderer_t *renderer, player_t players[2]);
-void play_on_enter(void *play_state);
-void play_update(void *play_state, float delta_time);
-void play_render(void *play_state, renderer_t *renderer);
+void init_play_state(play_state_t *play, renderer_t *renderer, player_t players[2]);
+void play_on_enter(play_state_t *play);
+void play_update(play_state_t *play, float delta_time);
+void play_render(play_state_t *play, renderer_t *renderer);
 
 // ================
 //  IMPLEMENTATION
@@ -35,58 +34,68 @@ void play_render(void *play_state, renderer_t *renderer);
 #include "fajter.h"
 #include "characters.h"
 #include <utils/macros.h>
+#include <utils/loging.h>
 
-void init_play_state(play_state_t *play_state, renderer_t *renderer, player_t players[2])
+void init_play_state(play_state_t *play, renderer_t *renderer, player_t players[2])
 {
-    *play_state = (play_state_t)
+    *play = (play_state_t)
     {
-        .state =
-        {
-            .on_enter = &play_on_enter,
-            .on_exit  = NULL,
-            .update   = &play_update,
-            .render   = &play_render,
-            .state_ctx = play_state
-        },
-        .background = renderer_load_texture(renderer, "./images/blidinje.jpg"),
-        .forground = renderer_load_texture(renderer, "./images/p2_ui2.png"),
+        .background = renderer_load_texture(renderer, "./images/stage1.jpg"),
         
         .player_right = &players[0],
         .player_left = &players[1],
     };
-    
-    // Set fighter to idile action states
-    select_players_fighter(play_state->player_right, &fajter_adem);
-    select_players_fighter(play_state->player_left, &fajter_adem);
+
+    // TODO: Make selecting system
+    const fighter_t *boke = load_character(renderer, "boke");
+    if (!boke)
+        printf("Boke nije loadan\n");
+
+    play->player_right->fighter = *boke;
 }
 
-void play_on_enter(void *ctx)
+void play_on_enter(play_state_t *play)
 {
-    play_state_t *play = (play_state_t *)ctx;
-    
     play->player_right->fighter.facing_right = true;
-    play->player_left->fighter.facing_right = false;
+    play->player_right->fighter.position_x = SCREEN_WIDTH / 2;
+    play->player_right->fighter.position_y = SCREEN_HEIGHT / 2;
 }
 
-void play_update(void *ctx, float delta_time)
+void play_update(play_state_t *play, float delta_time)
 {
-    play_state_t *play = (play_state_t *)ctx;
+    player_record_input(play->player_right);
 
     fighter_update(play->player_right, &play->player_right->fighter, delta_time);
-    fighter_update(play->player_left, &play->player_left->fighter, delta_time);
+    fighter_update_animation(&play->player_right->fighter, delta_time);
+    
+    if (play->player_right->fighter.velocity_x > 0)
+        play->player_right->fighter.facing_right = true;
+    else if (play->player_right->fighter.velocity_x < 0)
+        play->player_right->fighter.facing_right = false;
+    
+    //system("cls");
+    //printf(" state:%i\n dt:%.4f\n", play->player_right->fighter.state, delta_time);
 }
 
-void play_render(void *ctx, renderer_t *renderer)
-{
-    play_state_t *play = (play_state_t *)ctx;
-    
-    renderer_start_drawing(renderer);
-    renderer_draw_texture(renderer, LAYER_BACKGROUND, play->background, NULL, 0.0, SDL_FLIP_NONE);
-    
-    SDL_Rect ui_rect = {0, 0, 50, 50};
-    renderer_draw_texture(renderer, LAYER_ENTITY, play->forground, &ui_rect, 0.0, SDL_FLIP_NONE);
-
+void play_render(play_state_t *play, renderer_t *renderer)
+{   
     renderer_present(renderer);
+    renderer_start_drawing(renderer);
+    
+    //renderer_draw_texture(renderer, LAYER_BACKGROUND, play->background, NULL, 0.0, SDL_FLIP_NONE);
+    renderer_draw_fighter(renderer, &play->player_right->fighter);
+
+    renderer_draw_text(renderer, LAYER_BACKGROUND, "foo bar bazz\nbat", 0, 0, 20, 20, (SDL_Color){255,0,0,255});
+    
+    SDL_Point p1 = {play->player_right->fighter.position_x, play->player_right->fighter.position_y}, 
+              p2 = {play->player_right->fighter.position_x + play->player_right->fighter.velocity_x * 0.16,
+                    play->player_right->fighter.position_y + play->player_right->fighter.velocity_y * 0.16};
+    
+    const frame_collision_t *collis = fighter_get_collision(&play->player_right->fighter);
+    SDL_Rect hurt = to_world_rect(&play->player_right->fighter, collis->hurtboxs[0]);
+    
+    renderer_draw_rect(renderer, LAYER_UI1, &hurt, (SDL_Color){0,255,0,255}, false); 
+    renderer_draw_line(renderer, LAYER_UI1, p1, p2, (SDL_Color){0,0,255,255});
 }
 
 #endif /* PLAY_STATE_IMPL */

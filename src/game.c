@@ -4,13 +4,14 @@
 #define RENDERER_IMPL
 #define CHARACTERS_IMPL
 #define FAJTER_IMPL
+#define FONT_ATLAS_IMPLEMENTATION
+#include "font_atlas.h"
 #include "fajter.h"
 #include "characters.h"
 #include "game.h"
 
 #include <utils/loging.h>
 #include <utils/macros.h>
-#include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
 
 #define WIN_FLAGS       (SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE /*| SDL_WINDOW_FULLSCREEN_DESKTOP*/)
@@ -27,10 +28,6 @@ bool init_game(game_t *game)
     } 
     if (IMG_Init(IMAGE_FLAGS) != IMAGE_FLAGS) { 
         game_log( "ERROR", "IMG init: %s", SDL_GetError() );
-        return false;
-    }
-    if (TTF_Init()) { 
-        game_log( "ERROR", "TTF init: %s", SDL_GetError() );
         return false;
     }
 
@@ -53,12 +50,10 @@ bool init_game(game_t *game)
     // SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     
     if (!init_player_keybinds(game->players, &game->input)) {
-        game_log( "ERROR", "Keys not initialised count: %d", (INPUT_COUNT - 1));
+        game_log( "ERROR", "Keys not initialised count: %d", BUTTON_COUNT);
         return false;
     }
-
-    init_play_state(&game->play_state, &game->renderer, game->players);
-    init_state_machine(&game->play_state.state);
+    //init_state_machine(&game->play_state.state);
 
     game->time.target_frame_ms = 1000 / 60; // FPS ~60
     game->input.mouse.is_active = SDL_ShowCursor(SDL_ENABLE);
@@ -73,7 +68,6 @@ void no_game(game_t *game, int32_t exit_code)
     destroy_renderer(&game->renderer);
     SDL_DestroyWindow(game->window);
 
-    TTF_Quit();
     IMG_Quit();
     SDL_Quit();
     exit(exit_code); 
@@ -87,8 +81,8 @@ void handle_game_time(game_time_t *time)
     time->frame_elapsed = now_ticks - time->frame_start;
     time->delta_time = time->frame_elapsed / 1000.0f; /* delta time in seconds */
 
-    if (time->delta_time > 0.05f)
-        time->delta_time = 0.05f;
+    if (time->delta_time > 0.03f)
+        time->delta_time = 0.03f;
         
     if (time->frame_elapsed < time->target_frame_ms)
         SDL_Delay(time->target_frame_ms - time->frame_elapsed);

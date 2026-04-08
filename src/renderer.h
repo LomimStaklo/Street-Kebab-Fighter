@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+
 // =============
 //  DECLARATION
 // =============
@@ -38,12 +39,47 @@ typedef struct texture_t
     SDL_Rect src;
 } texture_t;
 
-typedef struct renderer_command_t 
+typedef enum renderer_command_id_t 
 {
-    texture_t texture; // Texture to be rendered
-    SDL_Rect dst;
-    double rotation;
-    SDL_RendererFlip flip;
+    REND_CMD_TEXTURE = 0,
+    REND_CMD_RECT,
+    REND_CMD_LINE,
+    REND_CMD_TEXT
+} renderer_command_id_t;
+
+// Tag union for all rendering comands
+typedef union renderer_command_t 
+{
+    uint32_t type; 
+    struct 
+    {
+        uint32_t type;
+        texture_t tex;  // Texture to be rendered
+        SDL_Rect dst;
+        double rotation;
+        SDL_RendererFlip flip;
+    } texture;
+    struct 
+    {
+        uint32_t type;
+        SDL_Rect dst;
+        SDL_Color col;
+        bool is_filled;
+    } rect;
+    struct 
+    {
+        uint32_t type;
+        SDL_Point p1, p2;
+        SDL_Color col;
+    } line;
+    struct 
+    {
+        uint32_t type;
+        const char *str; 
+        int32_t x, y; 
+        int32_t chr_w, chr_h; 
+        SDL_Color col;
+    } text;
 } renderer_command_t;
 
 typedef struct renderer_t
@@ -56,6 +92,7 @@ typedef struct renderer_t
     
     SDL_Renderer *sdl_renderer;
     SDL_Texture *game_screen;
+    SDL_Texture *font_texture; // Special member that is baked in font from "text.h"
 } renderer_t;
 
 bool init_renderer(renderer_t *renderer, SDL_Window *window);
@@ -63,7 +100,7 @@ void destroy_renderer(renderer_t *renderer); // Destroys the renderer with all t
 
 texture_t renderer_load_texture(renderer_t *renderer, const char *filepath);
 bool renderer_unload_texture(renderer_t *renderer, texture_handle_t tex_handle);
-texture_t renderer_create_subtexture(texture_handle_t tex_handle, SDL_Rect src);
+inline texture_t renderer_create_subtexture(texture_handle_t tex_handle, SDL_Rect src);
 
 void renderer_start_drawing(renderer_t *renderer);
 void renderer_present(renderer_t *renderer);
@@ -77,15 +114,43 @@ void renderer_draw_texture(
     SDL_RendererFlip flip
 );
 
+void renderer_draw_rect(
+    renderer_t *renderer,
+    render_layer_t layer,
+    const SDL_Rect *dst,
+    SDL_Color color,
+    bool do_fill
+);
+
+void renderer_draw_line(
+    renderer_t *renderer,
+    render_layer_t layer,
+    SDL_Point point1,
+    SDL_Point point2,
+    SDL_Color color
+);
+
+void renderer_draw_text(
+    renderer_t *renderer,
+    render_layer_t layer,
+    const char *text,
+    int32_t x, 
+    int32_t y, 
+    int32_t chr_w, 
+    int32_t chr_h, 
+    SDL_Color color
+);
+
 // ================
 //  IMPLEMENTATION
 // ================
 
-//  #define RENDERER_IMPL
 #ifdef RENDERER_IMPL
 
 #include <SDL2/SDL_image.h>
 #include <utils/macros.h>
+#include <string.h>
+#include "font_atlas.h"
 
 #define RENDERER_FLAGS (SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC)
 
@@ -104,6 +169,8 @@ bool init_renderer(renderer_t *renderer, SDL_Window *window)
         SCREEN_WIDTH, 
         SCREEN_HEIGHT
     );
+
+    renderer->font_texture = load_font_from_atlas(renderer);
     
     return true;
 }
@@ -119,8 +186,10 @@ void destroy_renderer(renderer_t *renderer)
         }
     }
 
+    SDL_DestroyTexture(renderer->font_texture);
     SDL_DestroyTexture(renderer->game_screen);
     SDL_DestroyRenderer(renderer->sdl_renderer);
+    renderer->font_texture = NULL;
     renderer->game_screen = NULL;
     renderer->sdl_renderer = NULL;
     renderer->texture_count = 0;
@@ -174,7 +243,7 @@ bool renderer_unload_texture(renderer_t *renderer, texture_handle_t tex_handle)
     return true;
 }
 
-texture_t renderer_create_subtexture(texture_handle_t tex_handle, SDL_Rect src)
+inline texture_t renderer_create_subtexture(texture_handle_t tex_handle, SDL_Rect src)
 {
     texture_t tex_tile = 
     {
@@ -182,32 +251,6 @@ texture_t renderer_create_subtexture(texture_handle_t tex_handle, SDL_Rect src)
         .src = src,
     };
     return tex_tile;
-}
-
-// if dst is NULL it gets rendered to whole screen
-void renderer_draw_texture(
-    renderer_t *renderer,
-    render_layer_t layer,
-    texture_t texture,
-    const SDL_Rect *dst,
-    double rotation,
-    SDL_RendererFlip flip) 
-{
-    if (renderer->command_count[layer] >= MAX_RENDERER_CMDS)
-        return;
-        
-    SDL_Rect dst_rect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
-    if (dst != NULL)  
-        dst_rect = *dst;
-    
-    renderer->commands[layer][renderer->command_count[layer]] = (renderer_command_t) 
-    {
-        .texture = texture,
-        .dst = dst_rect,
-        .rotation = rotation,
-        .flip = flip,
-    };
-    renderer->command_count[layer] += 1;
 }
 
 void renderer_start_drawing(renderer_t *renderer)
@@ -226,22 +269,110 @@ void renderer_present(renderer_t *renderer)
         for_range_i(renderer->command_count[layer])
         {
             renderer_command_t *cmd = &renderer->commands[layer][i];
-         
-            if (!is_in_range(0, (int32_t)renderer->texture_count, cmd->texture.handle))
-                continue;
             
-            SDL_RenderCopyEx(
-                renderer->sdl_renderer,
-                renderer->textures[cmd->texture.handle],
-                &cmd->texture.src,
-                &cmd->dst,
-                cmd->rotation,
-                NULL,
-                cmd->flip
-            );
+            // ---- RENDERING ---------------------------------------------------------------------------
+            switch (cmd->type)
+            {
+                // ---- TEXTURE -------------------------------------------------------------------------
+                case REND_CMD_TEXTURE:
+                {
+                    if (!is_in_range(0, (int32_t)renderer->texture_count, cmd->texture.tex.handle))
+                        continue;
+
+                    SDL_RenderCopyEx(
+                        renderer->sdl_renderer,
+                        renderer->textures[cmd->texture.tex.handle],
+                        &cmd->texture.tex.src,
+                        &cmd->texture.dst,
+                        cmd->texture.rotation,
+                        NULL,
+                        cmd->texture.flip
+                    );
+
+                    break;
+                }
+                // ---- RECT ----------------------------------------------------------------------------
+                case REND_CMD_RECT:
+                {
+                    SDL_SetRenderDrawColor(renderer->sdl_renderer, 
+                        cmd->rect.col.r, 
+                        cmd->rect.col.g, 
+                        cmd->rect.col.b, 
+                        255
+                    );
+
+                    if(cmd->rect.is_filled) 
+                        SDL_RenderFillRect(renderer->sdl_renderer, &cmd->rect.dst);
+                    else
+                        SDL_RenderDrawRect(renderer->sdl_renderer, &cmd->rect.dst);
+                    break;
+                }
+                // ---- LINE ----------------------------------------------------------------------------
+                case REND_CMD_LINE:
+                {
+                    SDL_SetRenderDrawColor(renderer->sdl_renderer, 
+                        cmd->line.col.r,
+                        cmd->line.col.g,
+                        cmd->line.col.b,
+                        cmd->line.col.a
+                    );
+
+                    SDL_RenderDrawLine(
+                        renderer->sdl_renderer,
+                        cmd->line.p1.x, 
+                        cmd->line.p1.y, 
+                        cmd->line.p2.x, 
+                        cmd->line.p2.y
+                    );
+                    break;
+                }
+                // ---- TEXT ----------------------------------------------------------------------------
+                case REND_CMD_TEXT: 
+                {
+                    SDL_SetRenderDrawColor(
+                        renderer->sdl_renderer, 
+                        cmd->text.col.r,
+                        cmd->text.col.g,
+                        cmd->text.col.b,
+                        cmd->text.col.a
+                    );
+                    // Constants that work on the specific font baked in the file text.h
+                    const int32_t FONT_W = 64, FONT_H = 64, FONT_ATLAS_COLUMS = 16;
+                    
+                    const uint32_t text_len = (uint32_t)strlen(cmd->text.str);
+                    // Where the characters (text rect of a char) will be rendered 
+                    SDL_Rect dst = { 
+                        cmd->text.x, cmd->text.y, 
+                        cmd->text.chr_w, cmd->text.chr_h
+                    };
+
+                    for_range_j(text_len)
+                    {
+                        unsigned char chr = cmd->text.str[j];
+                        if (chr < 32 || chr >= 128)
+                        {
+                            if (chr == '\n')
+                            {
+                                dst.x = cmd->text.x;
+                                dst.y += cmd->text.chr_h;
+                            }
+                            continue;
+                        }
+                        // Renders the text to screen rect by rect, char by char
+                        SDL_Rect src = tile_from_atlas((chr - 32), FONT_W, FONT_H, FONT_ATLAS_COLUMS);
+                        SDL_RenderCopy(renderer->sdl_renderer, renderer->font_texture, &src, &dst);
+
+                        dst.x += dst.w;
+                    }
+                    
+                    break;
+                }
+            }
+            
         }
     }
     SDL_SetRenderTarget(renderer->sdl_renderer, NULL);
+    SDL_SetRenderDrawColor(renderer->sdl_renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer->sdl_renderer);
 
     SDL_RenderCopy(
@@ -250,7 +381,123 @@ void renderer_present(renderer_t *renderer)
         NULL,
         NULL
     );
+
     SDL_RenderPresent(renderer->sdl_renderer);
+}
+
+// ---- TEXTURE -------------------------------------------------------------------------
+// if dst is NULL it gets rendered to whole screen
+void renderer_draw_texture(
+    renderer_t *renderer,
+    render_layer_t layer,
+    texture_t texture,
+    const SDL_Rect *dst,
+    double rotation,
+    SDL_RendererFlip flip) 
+{
+    if (renderer->command_count[layer] >= MAX_RENDERER_CMDS)
+        return;
+        
+    SDL_Rect dst_rect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+    if (dst != NULL)  
+        dst_rect = *dst;
+    
+    renderer->commands[layer][renderer->command_count[layer]] = (renderer_command_t) 
+    {
+        .texture = 
+        {
+            .type = REND_CMD_TEXTURE,
+            .tex = texture,
+            .dst = dst_rect,
+            .rotation = rotation,
+            .flip = flip,
+        }
+    };
+    renderer->command_count[layer] += 1;
+}
+
+
+// ---- RECT ----------------------------------------------------------------------------
+// if dst is NULL it gets rendered to whole screen
+void renderer_draw_rect(
+    renderer_t *renderer,
+    render_layer_t layer,
+    const SDL_Rect *dst,
+    SDL_Color color,
+    bool do_fill)
+{
+    if (renderer->command_count[layer] >= MAX_RENDERER_CMDS)
+        return;
+        
+    SDL_Rect dst_rect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+    if (dst != NULL)  
+        dst_rect = *dst;
+    
+    renderer->commands[layer][renderer->command_count[layer]] = (renderer_command_t) 
+    {
+        .rect =
+        {
+            .type = REND_CMD_RECT,
+            .dst = dst_rect,
+            .col = color,
+            .is_filled = do_fill
+        }
+    };
+    renderer->command_count[layer] += 1;
+}
+
+// ---- LINE ----------------------------------------------------------------------------
+void renderer_draw_line(
+    renderer_t *renderer,
+    render_layer_t layer,
+    SDL_Point point1,
+    SDL_Point point2,
+    SDL_Color color)
+{
+    if (renderer->command_count[layer] >= MAX_RENDERER_CMDS)
+        return;
+    
+    renderer->commands[layer][renderer->command_count[layer]] = (renderer_command_t) 
+    {
+        .line = 
+        {
+            .type = REND_CMD_LINE,
+            .p1  = point1,
+            .p2  = point2,
+            .col = color
+        }
+    };
+    renderer->command_count[layer] += 1;
+}
+
+// ---- TEXT ----------------------------------------------------------------------------
+void renderer_draw_text(
+    renderer_t *renderer,
+    render_layer_t layer,
+    const char *text,
+    int32_t x, 
+    int32_t y, 
+    int32_t chr_w, 
+    int32_t chr_h, 
+    SDL_Color color)
+{
+    if (renderer->command_count[layer] >= MAX_RENDERER_CMDS)
+        return;
+    
+    renderer->commands[layer][renderer->command_count[layer]] = (renderer_command_t) 
+    {
+        .text = 
+        {
+            .type  = REND_CMD_TEXT,
+            .str   = text,
+            .x     = x,
+            .y     = y,
+            .chr_w = chr_w,
+            .chr_h = chr_h,
+            .col   = color
+        }
+    };
+    renderer->command_count[layer] += 1;
 }
 
 #endif /* RENDERER_IMPL */

@@ -11,7 +11,7 @@
 //  DECLARATION
 // =============
 
-extern const fighter_t fajter_adem;
+extern const fighter_t fajter_boke;
 bool load_all_characters(renderer_t *renderer);
 
 // ================
@@ -20,58 +20,98 @@ bool load_all_characters(renderer_t *renderer);
 
 #ifdef CHARACTERS_IMPL
 
+#include <string.h>
 #include <utils/macros.h>
 
 // X macro for all playable character 
 #define CHARACTERS_XLIST \
-    X(adem) \
+    X(boke) \
+//    X(adem) 
 
-// Tile size for animations 
-static const SDL_Rect atlas_animation_tiles[ANIM_FRAME_COUNT];
-
-static fighter_visuals_t visuals_adem =
+static fighter_visuals_t visuals_boke =
 {
-    .sprite_atlas = {INVALID_TEXTURE_HANDLE, {0, 0, 0, 0}},
-    /* {start_frame, frame_count, frame_duration, loop} */
-    .idile        = {ANIM_FRAME_IDILE,        4, 0.12f, true}, 
-    .block        = {ANIM_FRAME_BLOCK,        1, 0.10f, true}, 
-    .crouch       = {ANIM_FRAME_CROUCH,       2, 0.10f, false},
-    .jump_up      = {ANIM_FRAME_JUMP_UP,      2, 0.15f, false}, 
-    .walk_forward = {ANIM_FRAME_WALK_FORWARD, 6, 0.10f, true}, 
-    .stand_light1 = {ANIM_FRAME_STAND_LIGHT1, 4, 0.08f, false}, 
-    .stand_light2 = {ANIM_FRAME_STAND_LIGHT2, 3, 0.08f, false}, 
-    .stand_medium = {ANIM_FRAME_STAND_MEDIUM, 4, 0.08f, false},
-    .stand_heavy  = {ANIM_FRAME_STAND_HEAVY,  6, 0.10f, false}, 
-    .special      = {ANIM_FRAME_SPECIAL,      8, 0.15f, false}, 
-    .crouch_light = {ANIM_FRAME_CROUCH_LIGHT, 4, 0.08f, false},
-    .frame_collisions = 
-    { 
-        [ANIM_FRAME_IDILE + 0] = { 
-            .hurtboxs[0] = {0, 0, 64, 64}, 
-            .count_hurtbox = 1 
-        }, 
-        [ANIM_FRAME_IDILE + 1] = {
-            .hurtboxs[1] = {0, 0, 64, 64},
-            .count_hurtbox = 1
+    .atlas_tex = {INVALID_TEXTURE_HANDLE, {0, 0, 0, 0}},
+    .animations[ANIM_IDLE] = {0,  2, 0.20f, true},
+    //.animations = 
+    //{
+    //    /* {start_frame, frame_count, frame_duration, loop} */
+    //    [ANIM_IDLE]         = {0,  4, 0.12f, true}, 
+    //    [ANIM_BLOCK]        = {4,  1, 0.10f, true}, 
+    //    [ANIM_CROUCH]       = {5,  2, 0.10f, false},
+    //    [ANIM_JUMP]         = {7,  2, 0.15f, false}, 
+    //    [ANIM_WALK]         = {9,  6, 0.10f, true}, 
+    //    [ANIM_STAND_LIGHT]  = {15, 4, 0.08f, false}, 
+    //    [ANIM_STAND_LIGHT2] = {19, 3, 0.08f, false}, 
+    //    [ANIM_STAND_MEDIUM] = {22, 4, 0.08f, false},
+    //    [ANIM_STAND_HEAVY]  = {26, 6, 0.10f, false}, 
+    //    [ANIM_CROUCH_LIGHT] = {32, 4, 0.08f, false},
+    //    [ANIM_SPECIAL1]     = {36, 8, 0.15f, false}, 
+    //    [ANIM_SPECIAL2]     = {44, 8, 0.15f, false}, 
+    //},
+    .atlas_frames =
+    {
+        // ANIM_IDLE [0]
+        [0] = {
+            .src = {0, 0, 48, 96},
+            .offset_x = 24, .offset_y = 92,                                 // 24
+            .collisions.count_hurtboxs = 1, .collisions.hurtboxs[0] = {12, 12, 36, 72},
         },
-    }, 
+        [1] = {
+            .src = {48, 0, 48, 96},
+            .offset_x = 24, .offset_y = 92,
+            .collisions.count_hurtboxs = 1, .collisions.hurtboxs[0] = {12, 12, 36, 72},
+        },
+        [2] = {
+            .src = {96, 0, 48, 96},
+            .offset_x = 24, .offset_y = 92,
+            .collisions.count_hurtboxs = 1, .collisions.hurtboxs[0] = {12, 12, 36, 72},
+        }
+        // ANIM_BLOCK [4]
+        // ANIM_CROUCH [5]
+        // ANIM_JUMP [7]
+        // ANIM_WALK [9]
+        // ANIM_STAND_LIGHT1 [15]
+        // ANIM_STAND_LIGHT2 [19]
+        // ANIM_STAND_MEDIUM [22]  
+        // ANIM_STAND_HEAVY [26]
+        // ANIM_CROUCH_LIGHT [32]
+        // ANIM_SPECIAL1 [36]
+        // ANIM_SPECIAL1 [44]
+    }
 };
 
-const fighter_t fajter_adem = 
+const fighter_t fajter_boke = 
 {
-    .name = "adem",
+    .name = "boke",
     .walk_speed = 180.0f,
-    .jump_force = 500.0f,
-    .visuals = &visuals_adem,
-    .curr_animation = &visuals_adem.idile,
-    .grounded = true,
+    .jump_force = 350.0f,
+    .visuals = &visuals_boke,
+    .animation = &visuals_boke.animations[ANIM_IDLE],
+    .is_grounded = true,
+    .is_crouching = false
 };
+
+// Returns NULL on failed load
+const fighter_t *load_character(renderer_t *renderer, const char *fajter_name)
+{
+    const fighter_t *fighter = NULL;
+    #define X(name) \
+        if ((strcmp(#name, fajter_name) == 0)) {  \
+            visuals_ ## name.atlas_tex = renderer_load_texture(renderer, "images/atlas_"#name".png"); \
+            if (visuals_ ## name.atlas_tex.handle == INVALID_TEXTURE_HANDLE) return fighter; \
+            fighter = &fajter_ ## name;}
+
+        CHARACTERS_XLIST
+    #undef X
+
+    return fighter;
+}
 
 bool load_all_characters(renderer_t *renderer)
 {
     #define X(name) \
-        visuals_ ## name.sprite_atlas = renderer_load_texture(renderer, "images/atlas_"#name); \
-        if (visuals_ ## name.sprite_atlas.handle == INVALID_TEXTURE_HANDLE) return false;
+        visuals_ ## name.atlas_tex = renderer_load_texture(renderer, "images/atlas_"#name".png"); \
+        if (visuals_ ## name.atlas_tex.handle == INVALID_TEXTURE_HANDLE) return false;
         
         CHARACTERS_XLIST
     #undef X

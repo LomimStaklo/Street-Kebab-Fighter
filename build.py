@@ -14,7 +14,7 @@ from platform import system as get_os_name
 # -lole32 -loleaut32 -lshell32 -lversion -luuid -static-libgcc"
 
 # ====== CONFIG ======= #
-cc       = "clang" # clang
+cc       = "clang" # clang / gcc
 src      = "src/*.c"
 flags    = "-std=c99 -Wall -Wextra -Wno-#warnings -Wshadow -pedantic -fstack-protector -O1" # -mwindows
 lib_path = "src/lib"
@@ -23,17 +23,17 @@ inc_path = "src/include"
 
 # ====== OS ======= #
 os_name = get_os_name() 
-out     = "main"
+out     = "SKF"
 libs    = ""
 cmd_run = ""
 
 match os_name:
     case "Windows":
         out  += ".exe"
-        libs = "-lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf"
+        libs = "-lmingw32 -lSDL2main -lSDL2 -lSDL2_image"
         cmd_run = f".\\{out}"
     case "Linux":
-        libs = "-lSDL2 -lSDL2_image -lSDL2_ttf"
+        libs = "-lSDL2 -lSDL2_image"
         cmd_run = f"./{out}"
     case _:
         print(f"[!] Wrong operating system {os_name}")
@@ -49,9 +49,9 @@ dbg_info  = False
 # ====== VARIABLES ======= # 
 
 def run_time(func) -> None:
-    _start_t = time()
+    _start_t: float = time()
     func()
-    duration = time() - _start_t
+    duration: float = time() - _start_t
     print(f"[i] {duration:.2f} sec")
 
 def run_cmd(cmd: str, msg: str) -> None:
