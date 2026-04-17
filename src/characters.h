@@ -3,7 +3,7 @@
 
 // Header only file!
 // For implementation you will need to define:
-// #define CHARACTERS_IMPL
+// #define CHARACTERS_IMPLEMENTATION
 
 #include "fajter.h"
 
@@ -18,7 +18,7 @@ bool load_all_characters(renderer_t *renderer);
 //  IMPLEMENTATION
 // ================
 
-#ifdef CHARACTERS_IMPL
+#ifdef CHARACTERS_IMPLEMENTATION
 
 #include <string.h>
 #include <utils/macros.h>
@@ -31,12 +31,17 @@ bool load_all_characters(renderer_t *renderer);
 static fighter_visuals_t visuals_boke =
 {
     .atlas_tex = {INVALID_TEXTURE_HANDLE, {0, 0, 0, 0}},
-    .animations[ANIM_IDLE] = {0,  2, 0.20f, true},
+    .animations = 
+    {    
+        /* {start_frame, frame_count, frame_duration, loop} */
+        [ANIM_IDLE]   = {0,  3, 0.25f, true},
+        [ANIM_CROUCH] = {3,  4, 0.05f, false},
+        [ANIM_WALK]   = {0,  3, 0.09f, true},
+    },
     //.animations = 
     //{
-    //    /* {start_frame, frame_count, frame_duration, loop} */
     //    [ANIM_IDLE]         = {0,  4, 0.12f, true}, 
-    //    [ANIM_BLOCK]        = {4,  1, 0.10f, true}, 
+    //    [ANIM_STAND_BLOCK]  = {4,  1, 0.10f, true}, 
     //    [ANIM_CROUCH]       = {5,  2, 0.10f, false},
     //    [ANIM_JUMP]         = {7,  2, 0.15f, false}, 
     //    [ANIM_WALK]         = {9,  6, 0.10f, true}, 
@@ -48,25 +53,46 @@ static fighter_visuals_t visuals_boke =
     //    [ANIM_SPECIAL1]     = {36, 8, 0.15f, false}, 
     //    [ANIM_SPECIAL2]     = {44, 8, 0.15f, false}, 
     //},
-    .atlas_frames =
+    .atlas_frames = 
     {
         // ANIM_IDLE [0]
         [0] = {
             .src = {0, 0, 48, 96},
-            .offset_x = 24, .offset_y = 92,                                 // 24
-            .collisions.count_hurtboxs = 1, .collisions.hurtboxs[0] = {12, 12, 36, 72},
+            .offset_x = 24, .offset_y = 88, 
+            .count_hurtboxs = 1, .hurtboxs[0] = {12, 12, 24, 72},
         },
         [1] = {
             .src = {48, 0, 48, 96},
-            .offset_x = 24, .offset_y = 92,
-            .collisions.count_hurtboxs = 1, .collisions.hurtboxs[0] = {12, 12, 36, 72},
+            .offset_x = 24, .offset_y = 88,
+            .count_hurtboxs = 1, .hurtboxs[0] = {12, 12, 24, 72},
         },
         [2] = {
             .src = {96, 0, 48, 96},
-            .offset_x = 24, .offset_y = 92,
-            .collisions.count_hurtboxs = 1, .collisions.hurtboxs[0] = {12, 12, 36, 72},
-        }
-        // ANIM_BLOCK [4]
+            .offset_x = 24, .offset_y = 88,
+            .count_hurtboxs = 1, .hurtboxs[0] = {12, 12, 24, 72},
+        },
+        // ANIM_CROUCH
+        [3] = {
+            .src = {0, 96, 48, 96},
+            .offset_x = 24, .offset_y = 88,     // x, y,  w,  h                           
+            .count_hurtboxs = 1, .hurtboxs[0] = {8, 48, 36, 36},
+        },
+        [4] = {
+            .src = {48, 96, 48, 96},
+            .offset_x = 24, .offset_y = 88,    // x, y,  w,  h                              
+            .count_hurtboxs = 1, .hurtboxs[0] = {8, 48, 36, 36},
+        },
+        [5] = {
+            .src = {96, 96, 48, 96},
+            .offset_x = 24, .offset_y = 88,    // x, y,  w,  h                              
+            .count_hurtboxs = 1, .hurtboxs[0] = {8, 48, 36, 36},
+        },
+        [6] = {
+            .src = {144, 96, 48, 96},
+            .offset_x = 24, .offset_y = 88,    // x, y,  w,  h                              
+            .count_hurtboxs = 1, .hurtboxs[0] = {8, 48, 36, 36},
+        },
+        // ANIM_STAND_BLOCK [4]
         // ANIM_CROUCH [5]
         // ANIM_JUMP [7]
         // ANIM_WALK [9]
@@ -87,8 +113,18 @@ const fighter_t fajter_boke =
     .jump_force = 350.0f,
     .visuals = &visuals_boke,
     .animation = &visuals_boke.animations[ANIM_IDLE],
+    .animation_id = ANIM_IDLE,
     .is_grounded = true,
-    .is_crouching = false
+
+    .attacks.stat = 
+    {
+        // Damage, knock_x, knock_y, atk_time, stun_time, func, sequence_count, sequence 
+        .stand_light = {
+            .damage = 10, .knockback_x = 20.0f, .knockback_y = 0.0f,
+            .atk_duration = 0.40f, .stun_duration = 0.0f,
+            .func = NULL, .sequence = {.count = 0, .actions = {INPUT_NONE}}
+        },
+    }
 };
 
 // Returns NULL on failed load
@@ -119,6 +155,6 @@ bool load_all_characters(renderer_t *renderer)
     return true;
 }
 
-#endif /* CHARACTERS_IMPL */
+#endif /* CHARACTERS_IMPLEMENTATION */
 
 #endif /* !_CHARACTERS_H */

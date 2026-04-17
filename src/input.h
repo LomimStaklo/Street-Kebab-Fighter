@@ -3,7 +3,7 @@
 
 // Header only file! 
 // For implementation you will need to define:
-// #define INPUT_IMPL
+// #define INPUT_IMPLEMENTATION
 
 #include <SDL2/SDL.h>
 #include <stdbool.h>
@@ -16,23 +16,41 @@
 
 typedef struct button_state_t
 {
-    bool down;
+    bool holding;
     bool pressed;
     bool released;
 } button_state_t;
 
 typedef enum input_actions_t
 {
-    INPUT_NONE   = 0, 
-    INPUT_UP     = 1 << 0,
-    INPUT_DOWN   = 1 << 1,
-    INPUT_RIGHT  = 1 << 2,
-    INPUT_LEFT   = 1 << 3,
-    INPUT_LIGHT  = 1 << 4,
-    INPUT_MEDIUM = 1 << 5,
-    INPUT_HEAVY  = 1 << 6,
+    INPUT_NONE = 0,
+
+    INPUT_HOLDING_UP      = 1 << 0,
+    INPUT_HOLDING_DOWN    = 1 << 1,
+    INPUT_HOLDING_RIGHT   = 1 << 2,
+    INPUT_HOLDING_LEFT    = 1 << 3,
+    INPUT_HOLDING_LIGHT   = 1 << 4,
+    INPUT_HOLDING_MEDIUM  = 1 << 5,
+    INPUT_HOLDING_HEAVY   = 1 << 6,
+    INPUT_HOLDING_BLOCK   = INPUT_HOLDING_LIGHT | INPUT_HOLDING_LEFT,
+     
+    INPUT_PRESSED_UP      = (INPUT_HOLDING_UP     << 8),
+    INPUT_PRESSED_DOWN    = (INPUT_HOLDING_DOWN   << 8),
+    INPUT_PRESSED_RIGHT   = (INPUT_HOLDING_RIGHT  << 8),
+    INPUT_PRESSED_LEFT    = (INPUT_HOLDING_LEFT   << 8),
+    INPUT_PRESSED_LIGHT   = (INPUT_HOLDING_LIGHT  << 8),
+    INPUT_PRESSED_MEDIUM  = (INPUT_HOLDING_MEDIUM << 8),
+    INPUT_PRESSED_HEAVY   = (INPUT_HOLDING_HEAVY  << 8),
+    INPUT_PRESSED_BLOCK   = (INPUT_HOLDING_BLOCK  << 8),
     
-    INPUT_BLOCK  = INPUT_LIGHT | INPUT_LEFT,  
+    INPUT_RELEASED_UP     = (INPUT_HOLDING_UP     << 16), 
+    INPUT_RELEASED_DOWN   = (INPUT_HOLDING_DOWN   << 16), 
+    INPUT_RELEASED_RIGHT  = (INPUT_HOLDING_RIGHT  << 16), 
+    INPUT_RELEASED_LEFT   = (INPUT_HOLDING_LEFT   << 16), 
+    INPUT_RELEASED_LIGHT  = (INPUT_HOLDING_LIGHT  << 16), 
+    INPUT_RELEASED_MEDIUM = (INPUT_HOLDING_MEDIUM << 16),
+    INPUT_RELEASED_HEAVY  = (INPUT_HOLDING_HEAVY  << 16), 
+    INPUT_RELEASED_BLOCK  = (INPUT_HOLDING_BLOCK  << 16),
 } input_actions_t;
 
 typedef enum button_actions_t
@@ -70,61 +88,63 @@ typedef struct player_t
 {
     fighter_t fighter; 
     button_state_t *keybinds[BUTTON_COUNT];
-    
-    uint8_t input_down;     // Bitfield for input_actions_t
-    uint8_t input_pressed;  // Bitfield for input_actions_t
-    uint8_t input_released; // Bitfield for input_actions_t
 
-    uint8_t actions_history[8]; // recoded move
+    // recoded moves going form oldest[0] -> newest[len] but the sequence is the other way around
+    input_actions_t input_history[8];
 } player_t;
 
-//bool init_player_keybinds(player_t player[2], input_t *input);
-input_actions_t player_down_input(player_t *player);  // Gets the "down" input bitflags  
+// bool init_players(player_t player[2], input_t *input);
+input_actions_t player_get_input(player_t *player);  // Gets the input bitflags  
 void player_record_input(player_t *player);
 
 // ================
 //  IMPLEMENTATION
 // ================
 
-#ifdef INPUT_IMPL
+#ifdef INPUT_IMPLEMENTATION
 
 #include <utils/macros.h>
 
-input_actions_t player_down_input(player_t *player)
+bool player_check_combo(input_actions_t *history, input_sequence_t *seq)
 {
-    return player->input_down; 
+    bool result = false;
+
+    for_range_i(seq->count)
+    {
+        if (!(history[i] & seq->actions[i]))
+        {
+            
+        }
+    }
+    return false;
+}
+
+input_actions_t player_get_input(player_t *player)
+{
+    return player->input_history[lenof_arr(player->input_history) - 1]; 
 }
 
 void player_record_input(player_t *player)
 {
-    player->input_down     = INPUT_NONE; 
-    player->input_pressed  = INPUT_NONE;
-    player->input_released = INPUT_NONE;
+    // Inputs actions get moved to the 
+    for_range_i(lenof_arr(player->input_history) - 1)
+    {
+        player->input_history[i] = player->input_history[i + 1];
+    }
     
+    input_actions_t input_action = INPUT_NONE;  // Bitfield for input_actions_t  
+
     for (uint32_t i = 0, flag = 1; i < BUTTON_COUNT; i++, flag <<= 1)
     {
-        player->input_down     |= player->keybinds[i]->down * flag;
-        player->input_pressed  |= player->keybinds[i]->pressed * flag;
-        player->input_released |= player->keybinds[i]->released * flag;
+        input_action |= (player->keybinds[i]->holding  * flag) << 0;
+        input_action |= (player->keybinds[i]->pressed  * flag) << 8;
+        input_action |= (player->keybinds[i]->released * flag) << 16;
     }
-    /* 
-    system("cls");
-    game_log("INFO", "\n inp = %d\n"   
-        "INPUT_UP     = %b\n"
-        "INPUT_DOWN   = %b\n"
-        "INPUT_RIGHT  = %b\n"
-        "INPUT_LEFT   = %b\n"
-        "INPUT_LIGHT  = %b\n"
-        "INPUT_MEDIUM = %b\n"
-        "INPUT_HEAVY  = %b\n", player->input_down,
-        player->input_down & INPUT_UP, player->input_down & INPUT_DOWN, player->input_down & INPUT_RIGHT, 
-        player->input_down & INPUT_LEFT, player->input_down & INPUT_LIGHT, player->input_down & INPUT_MEDIUM,
-        player->input_down & INPUT_HEAVY
-    );
-    */
+
+    player->input_history[lenof_arr(player->input_history) - 1] = input_action;
 }
 
-bool init_player_keybinds(player_t player[2], input_t *input)
+bool init_players(player_t player[2], input_t *input)
 {
     const SDL_Scancode keys_p1[] = 
     {
@@ -161,6 +181,6 @@ bool init_player_keybinds(player_t player[2], input_t *input)
     return true;
 }
 
-#endif /* INPUT_IMPL */
+#endif /* INPUT_IMPLEMENTATION */
 
 #endif /* !_INPUT_H */

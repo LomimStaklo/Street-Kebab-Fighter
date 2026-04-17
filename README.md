@@ -1,5 +1,5 @@
 # Street Kebab Fighter
-Game made in C with SDL2
+Street Fighter like game made in C with SDL2. 
 
 ## Build
 Currently game supports only **gcc** and **clang** compilers.

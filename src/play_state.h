@@ -3,7 +3,7 @@
 
 // Header only file!
 // For implementation you will need to define:
-// #define PLAY_STATE_IMPL
+// #define PLAY_STATE_IMPLEMENTATION
 
 #include "input.h"
 #include "renderer.h"
@@ -30,7 +30,7 @@ void play_render(play_state_t *play, renderer_t *renderer);
 //  IMPLEMENTATION
 // ================
 
-#ifdef PLAY_STATE_IMPL
+#ifdef PLAY_STATE_IMPLEMENTATION
 #include "fajter.h"
 #include "characters.h"
 #include <utils/macros.h>
@@ -40,7 +40,7 @@ void init_play_state(play_state_t *play, renderer_t *renderer, player_t players[
 {
     *play = (play_state_t)
     {
-        .background = renderer_load_texture(renderer, "./images/stage1.jpg"),
+        .background = {INVALID_TEXTURE_HANDLE, {0}},
         
         .player_right = &players[0],
         .player_left = &players[1],
@@ -72,32 +72,45 @@ void play_update(play_state_t *play, float delta_time)
         play->player_right->fighter.facing_right = true;
     else if (play->player_right->fighter.velocity_x < 0)
         play->player_right->fighter.facing_right = false;
-    
-    //system("cls");
-    //printf(" state:%i\n dt:%.4f\n", play->player_right->fighter.state, delta_time);
 }
 
 void play_render(play_state_t *play, renderer_t *renderer)
 {   
-    renderer_present(renderer);
+    fighter_t *fighter = &play->player_right->fighter;
+    char buff[128] = "";
+    
+    #define X(name) (fighter->state == name) ? #name :  
+        
+    snprintf(buff, sizeof(buff), "%s\nANIM_ID:%d GND:%d\nPOS:%.1f, %.1f", 
+        STATE_XLIST "None", 
+        fighter->animation_id,
+        fighter->is_grounded,
+        fighter->position_x, fighter->position_y
+    );  
+    #undef X
+    
+    SDL_Point p1 = {fighter->position_x, fighter->position_y}, 
+              p2 = {fighter->position_x + fighter->velocity_x * 0.16,
+                    fighter->position_y + fighter->velocity_y * 0.16};
+    
+    const frame_collision_t *collis = fighter_get_collision(fighter);
+    SDL_Rect hurt = to_world_rect(fighter, collis->hurtboxs[0]);
+    
+    SDL_Rect origin = { fighter->position_x - 3, fighter->position_y - 3, 6, 6 };
+    
     renderer_start_drawing(renderer);
     
-    //renderer_draw_texture(renderer, LAYER_BACKGROUND, play->background, NULL, 0.0, SDL_FLIP_NONE);
-    renderer_draw_fighter(renderer, &play->player_right->fighter);
-
-    renderer_draw_text(renderer, LAYER_BACKGROUND, "foo bar bazz\nbat", 0, 0, 20, 20, (SDL_Color){255,0,0,255});
-    
-    SDL_Point p1 = {play->player_right->fighter.position_x, play->player_right->fighter.position_y}, 
-              p2 = {play->player_right->fighter.position_x + play->player_right->fighter.velocity_x * 0.16,
-                    play->player_right->fighter.position_y + play->player_right->fighter.velocity_y * 0.16};
-    
-    const frame_collision_t *collis = fighter_get_collision(&play->player_right->fighter);
-    SDL_Rect hurt = to_world_rect(&play->player_right->fighter, collis->hurtboxs[0]);
+    renderer_draw_rect(renderer, LAYER_UI1, &origin, (SDL_Color){255, 255, 0, 255}, false);
+    renderer_draw_text(renderer, LAYER_ENTITY, (const char *)buff, 20, 20, 20, 20, (SDL_Color){255,0,0,255});
+    renderer_draw_fighter(renderer, fighter);
     
     renderer_draw_rect(renderer, LAYER_UI1, &hurt, (SDL_Color){0,255,0,255}, false); 
+    
     renderer_draw_line(renderer, LAYER_UI1, p1, p2, (SDL_Color){0,0,255,255});
+    
+    renderer_present(renderer);
 }
 
-#endif /* PLAY_STATE_IMPL */
+#endif /* PLAY_STATE_IMPLEMENTATION */
 
 #endif /* !_PLAY_STATE_H */

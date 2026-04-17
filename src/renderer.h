@@ -3,7 +3,7 @@
 
 // Header only file!
 // For implementation you will need to define:
-// #define RENDERER_IMPL
+// #define RENDERER_IMPLEMENTATION
 
 #include <SDL2/SDL.h>
 #include <stdbool.h>
@@ -145,7 +145,7 @@ void renderer_draw_text(
 //  IMPLEMENTATION
 // ================
 
-#ifdef RENDERER_IMPL
+#ifdef RENDERER_IMPLEMENTATION
 
 #include <SDL2/SDL_image.h>
 #include <utils/macros.h>
@@ -416,7 +416,6 @@ void renderer_draw_texture(
     renderer->command_count[layer] += 1;
 }
 
-
 // ---- RECT ----------------------------------------------------------------------------
 // if dst is NULL it gets rendered to whole screen
 void renderer_draw_rect(
@@ -500,6 +499,6 @@ void renderer_draw_text(
     renderer->command_count[layer] += 1;
 }
 
-#endif /* RENDERER_IMPL */
+#endif /* RENDERER_IMPLEMENTATION */
 
 #endif /* !_RENDERER_H */

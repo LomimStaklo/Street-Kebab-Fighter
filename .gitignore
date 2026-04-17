@@ -1,6 +1,6 @@
 .vscode
-sounds
-./images/boke*.png
-./images/font_atlas.png
-./images/SKF_icon.png
-./images/ui_select_rect.png
+sounds/
+images/font_atlas.png
+images/atlas_boke?.png
+images/ui_select_rect.png
+images/blidinje.jpg

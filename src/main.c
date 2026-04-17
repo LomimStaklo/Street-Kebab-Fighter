@@ -1,5 +1,5 @@
 #include "game.h"
-//#include <SDL2/SDL_image.h>
+#include <SDL2/SDL_image.h>
 //#include <utils/loging.h>
 //#include <utils/macros.h>
 
@@ -14,7 +14,14 @@ int main(int argc, char **argv)
         no_game(&game, EXIT_FAILURE);
     
     init_play_state(&game.play_state, &game.renderer, game.players);
-    play_on_enter(&game.play_state);    
+    play_on_enter(&game.play_state); 
+    
+    SDL_Surface *ico = IMG_Load("images/SKF_icon.png");
+    if (ico)
+    {
+        SDL_SetWindowIcon(game.window, ico);
+        SDL_FreeSurface(ico);
+    } 
 
     while (game.running)
     {

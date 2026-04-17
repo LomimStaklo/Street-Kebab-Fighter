@@ -1,9 +1,8 @@
-#define INPUT_IMPL
-#define STATE_IMPL
-#define PLAY_STATE_IMPL
-#define RENDERER_IMPL
-#define CHARACTERS_IMPL
-#define FAJTER_IMPL
+#define INPUT_IMPLEMENTATION
+#define PLAY_STATE_IMPLEMENTATION
+#define RENDERER_IMPLEMENTATION
+#define CHARACTERS_IMPLEMENTATION
+#define FAJTER_IMPLEMENTATION
 #define FONT_ATLAS_IMPLEMENTATION
 #include "font_atlas.h"
 #include "fajter.h"
@@ -14,6 +13,7 @@
 #include <utils/macros.h>
 #include <SDL2/SDL_image.h>
 
+#define INIT_FLAGS      (SDL_INIT_VIDEO | SDL_INIT_TIMER  | SDL_INIT_EVENTS)
 #define WIN_FLAGS       (SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE /*| SDL_WINDOW_FULLSCREEN_DESKTOP*/)
 #define IMAGE_FLAGS     (IMG_INIT_JPG | IMG_INIT_PNG)
 #define RENDERER_FLAGS  (SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC)
@@ -22,7 +22,7 @@ bool init_game(game_t *game)
 {
     memset((void *)game, 0, sizeof(game_t));
 
-    if (SDL_Init(SDL_INIT_EVERYTHING) < 0) { 
+    if (SDL_Init(INIT_FLAGS) < 0) { 
         game_log( "ERROR", "SDL init: %s", SDL_GetError() );
         return false;
     } 
@@ -47,9 +47,9 @@ bool init_game(game_t *game)
         game_log( "ERROR", "SDL renderer: %s", SDL_GetError() );
         return false; 
     }
-    // SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+    //SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     
-    if (!init_player_keybinds(game->players, &game->input)) {
+    if (!init_players(game->players, &game->input)) {
         game_log( "ERROR", "Keys not initialised count: %d", BUTTON_COUNT);
         return false;
     }
@@ -81,8 +81,8 @@ void handle_game_time(game_time_t *time)
     time->frame_elapsed = now_ticks - time->frame_start;
     time->delta_time = time->frame_elapsed / 1000.0f; /* delta time in seconds */
 
-    if (time->delta_time > 0.03f)
-        time->delta_time = 0.03f;
+    if (time->delta_time > 0.05f)
+        time->delta_time = 0.05f;
         
     if (time->frame_elapsed < time->target_frame_ms)
         SDL_Delay(time->target_frame_ms - time->frame_elapsed);
@@ -116,7 +116,7 @@ void handle_SDL_events(game_t *game)
             {
                 if (!event.key.repeat) 
                 {
-                    game->input.keys[event.key.keysym.scancode].down    = true;
+                    game->input.keys[event.key.keysym.scancode].holding    = true;
                     game->input.keys[event.key.keysym.scancode].pressed = true;
                 }
             } break;
@@ -132,7 +132,7 @@ void handle_SDL_events(game_t *game)
                         SDL_SetWindowFullscreen(game->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
                 }
 
-                game->input.keys[event.key.keysym.scancode].down     = false;
+                game->input.keys[event.key.keysym.scancode].holding     = false;
                 game->input.keys[event.key.keysym.scancode].released = true;
             } break;
 
@@ -148,7 +148,7 @@ void handle_SDL_events(game_t *game)
                 if (game->input.mouse.is_active) 
                 {
                     mouse_button_t button = event.button.button - 1;
-                    game->input.mouse.buttons[button].down    = true;
+                    game->input.mouse.buttons[button].holding    = true;
                     game->input.mouse.buttons[button].pressed = true;
                 }
                 break;
@@ -157,7 +157,7 @@ void handle_SDL_events(game_t *game)
                 if (game->input.mouse.is_active) 
                 {
                     mouse_button_t button = event.button.button - 1;
-                    game->input.mouse.buttons[button].down     = false;
+                    game->input.mouse.buttons[button].holding     = false;
                     game->input.mouse.buttons[button].released = true;
                 }
                 break;
