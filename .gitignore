@@ -1,6 +1,7 @@
 .vscode
 sounds/
-images/font_atlas.png
-images/atlas_boke*.png
-images/ui_select_rect.png
-images/blidinje.jpg
+images/*
+!images/atlas_boke.png
+!images/SKF_icon.png
+!images/stage_cava.jpg
+!images/atlas_template.png

@@ -34,69 +34,80 @@ static fighter_visuals_t visuals_boke =
     .animations = 
     {    
         /* {start_frame, frame_count, frame_duration, loop} */
-        [ANIM_IDLE]   = {0,  3, 0.25f, true},
-        [ANIM_CROUCH] = {3,  4, 0.05f, false},
-        [ANIM_WALK]   = {0,  3, 0.09f, true},
+        // Animations with size 48x96
+        [ANIM_IDLE]          = {0,  3, 0.25f, true},
+        [ANIM_STAND_BLOCK]   = {3,  1, 0.05f, false},
+        [ANIM_CROUCH]        = {4,  4, 0.05f, false},
+        [ANIM_WALK]          = {0,  3, 0.09f, true},
+        
+        // Animations with size 64x96
+        [ANIM_STAND_LIGHT]   = {21, 2, 0.07f, false},
+        [ANIM_COMBO1]        = {4,  2, 0.05f, false},
     },
-    //.animations = 
-    //{
-    //    [ANIM_IDLE]         = {0,  4, 0.12f, true}, 
-    //    [ANIM_STAND_BLOCK]  = {4,  1, 0.10f, true}, 
-    //    [ANIM_CROUCH]       = {5,  2, 0.10f, false},
-    //    [ANIM_JUMP]         = {7,  2, 0.15f, false}, 
-    //    [ANIM_WALK]         = {9,  6, 0.10f, true}, 
-    //    [ANIM_STAND_LIGHT]  = {15, 4, 0.08f, false}, 
-    //    [ANIM_STAND_LIGHT2] = {19, 3, 0.08f, false}, 
-    //    [ANIM_STAND_MEDIUM] = {22, 4, 0.08f, false},
-    //    [ANIM_STAND_HEAVY]  = {26, 6, 0.10f, false}, 
-    //    [ANIM_CROUCH_LIGHT] = {32, 4, 0.08f, false},
-    //    [ANIM_SPECIAL1]     = {36, 8, 0.15f, false}, 
-    //    [ANIM_SPECIAL2]     = {44, 8, 0.15f, false}, 
-    //},
+
     .atlas_frames = 
     {
-        // ANIM_IDLE [0]
+        // ANIM_IDLE 
         [0] = {
-            .src = {0, 0, 48, 96},
+            .src = tile_48x96(0),
             .offset_x = 24, .offset_y = 88, 
             .count_hurtboxs = 1, .hurtboxs[0] = {12, 12, 24, 72},
         },
         [1] = {
-            .src = {48, 0, 48, 96},
+            .src = tile_48x96(1),
             .offset_x = 24, .offset_y = 88,
             .count_hurtboxs = 1, .hurtboxs[0] = {12, 12, 24, 72},
         },
         [2] = {
-            .src = {96, 0, 48, 96},
+            .src = tile_48x96(2),
             .offset_x = 24, .offset_y = 88,
             .count_hurtboxs = 1, .hurtboxs[0] = {12, 12, 24, 72},
         },
-        // ANIM_CROUCH
+        // ANIM_STAND_BLOCK
         [3] = {
-            .src = {0, 96, 48, 96},
+            .src = tile_48x96(3),
+            .offset_x = 24, .offset_y = 88,     // x, y,  w,  h                           
+            .count_hurtboxs = 1, .hurtboxs[0] =  {12, 16, 24, 68},
+        },
+        // ANIM_CROUCH
+        [4] = {
+            .src = tile_48x96(4),
             .offset_x = 24, .offset_y = 88,     // x, y,  w,  h                           
             .count_hurtboxs = 1, .hurtboxs[0] = {8, 48, 36, 36},
         },
-        [4] = {
-            .src = {48, 96, 48, 96},
-            .offset_x = 24, .offset_y = 88,    // x, y,  w,  h                              
-            .count_hurtboxs = 1, .hurtboxs[0] = {8, 48, 36, 36},
-        },
         [5] = {
-            .src = {96, 96, 48, 96},
+            .src = tile_48x96(5),
             .offset_x = 24, .offset_y = 88,    // x, y,  w,  h                              
             .count_hurtboxs = 1, .hurtboxs[0] = {8, 48, 36, 36},
         },
         [6] = {
-            .src = {144, 96, 48, 96},
+            .src = tile_48x96(6),
             .offset_x = 24, .offset_y = 88,    // x, y,  w,  h                              
             .count_hurtboxs = 1, .hurtboxs[0] = {8, 48, 36, 36},
         },
+        [7] = {
+            .src = tile_48x96(7),
+            .offset_x = 24, .offset_y = 88,    // x, y,  w,  h                              
+            .count_hurtboxs = 1, .hurtboxs[0] = {8, 48, 36, 36},
+        },
+        
+        // 64x96 TILES
+        // ANIM_STAND_LIGHT 
+        [21] = {
+            .src = tile_64x96(0),
+            .offset_x = 24, .offset_y = 88,
+            .count_hurtboxs = 1, .hurtboxs[0] = {24, 12, 24, 72}
+        },
+        [22] = {
+            .src = tile_64x96(1),
+            .offset_x = 8, .offset_y = 88,
+            .count_hurtboxs = 1, .hurtboxs[0] = {4, 12, 24, 72},
+            .count_hitboxs  = 1, .hitboxs[0]  = {32, 24, 32, 8},
+        }
         // ANIM_STAND_BLOCK [4]
         // ANIM_CROUCH [5]
-        // ANIM_JUMP [7]
+        // ANIM_AIRBORNE [7]
         // ANIM_WALK [9]
-        // ANIM_STAND_LIGHT1 [15]
         // ANIM_STAND_LIGHT2 [19]
         // ANIM_STAND_MEDIUM [22]  
         // ANIM_STAND_HEAVY [26]
@@ -109,6 +120,7 @@ static fighter_visuals_t visuals_boke =
 const fighter_t fajter_boke = 
 {
     .name = "boke",
+    .hp         = 200,
     .walk_speed = 180.0f,
     .jump_force = 350.0f,
     .visuals = &visuals_boke,
@@ -116,16 +128,61 @@ const fighter_t fajter_boke =
     .animation_id = ANIM_IDLE,
     .is_grounded = true,
 
-    // Damage, knock_x, knock_y, atk_time, stun_time, func, sequence_count, sequence 
-    .stand_light = {
-        .damage = 10, 
-        .knockback_x = 20.0f, .knockback_y = 0.0f,
-        .recoil_x = 0.0f, .recoil_y = 0.0f,
-        .atk_duration = 0.40f, .stun_duration = 0.0f,
-        .func = NULL, .sequence = {{0}}
-    },
-    .jump = {
-        .atk_duration = 0.5f
+    // ---- ATTACK STATS ------------------------------------------------------------------
+    .attacks = 
+    {
+        [ATK_ID_STAND_LIGHT] = 
+        {
+            .damage = 10,
+            .stun_duration = 0.0f,
+            .knockback_x   = 20.0f, .knockback_y = 0.0f,
+            .recoil_x      = 0.0f,  .recoil_y    = 0.0f,
+            
+            .animation_id = ANIM_STAND_LIGHT,
+            .triger       = ATK_TRIGGER_ON_HIT,
+            .flags        = ATK_FLAG_NONE,
+            .func = NULL, 
+            .sequence = {{0}, 0}
+        },
+        [ATK_ID_STAND_MEDIUM] = 
+        {
+            .damage = 15, 
+            .stun_duration = 0.0f,
+            .knockback_x   = 20.0f, .knockback_y = 0.0f,
+            .recoil_x      = 0.0f,  .recoil_y    = 0.0f,
+        
+            .animation_id = ANIM_STAND_MEDIUM,
+            .triger       = ATK_TRIGGER_ON_HIT,
+            .flags        = ATK_FLAG_NONE,
+            .func = NULL, 
+            .sequence = {{0}, 0}
+        },
+        [ATK_ID_STAND_HEAVY] = 
+        {
+            .damage = 25, 
+            .stun_duration = 0.0f,
+            .knockback_x   = 20.0f, .knockback_y = 0.0f,
+            .recoil_x      = 0.0f,  .recoil_y    = 0.0f,
+            
+            .animation_id = ANIM_STAND_HEAVY,
+            .triger       = ATK_TRIGGER_ON_HIT,
+            .flags        = ATK_FLAG_KNOCKDOWN,
+            .func = NULL, 
+            .sequence = {{0}, 0}
+        },
+        [ATK_ID_COMBO1] = 
+        {
+            .damage = 25, 
+            .stun_duration = 0.0f,
+            .knockback_x   = 20.0f, .knockback_y = 0.0f,
+            .recoil_x      = 0.0f,  .recoil_y    = 0.0f,
+            
+            .animation_id = ANIM_COMBO1,
+            .triger       = ATK_TRIGGER_ON_HIT,
+            .flags        = ATK_FLAG_KNOCKDOWN | ATK_FLAG_CANCEABLE,
+            .func = NULL, 
+            .sequence = {{INPUT_PRESSED_RIGHT, INPUT_PRESSED_RIGHT}, 2}
+        },
     }
 };
 

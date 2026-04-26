@@ -90,8 +90,8 @@ typedef struct player_t
     button_state_t *keybinds[BUTTON_COUNT];
 
     // recoded moves going form oldest[0] -> newest[len] but the sequence is the other way around
-    input_actions_t input_history[8];
-    float           input_timestamps[8]; // Timestamp history of inputs
+    input_actions_t input_history[16];
+    float           input_timestamps[16]; // Timestamp history of inputs
     float           input_timer; // Timestamp of the newest input
 } player_t;
 
@@ -107,17 +107,17 @@ void player_record_input(player_t *player, float delta_time);
 
 #include <utils/macros.h>
 
-bool player_check_combo(player_t *player, input_sequence_t *seq)
+bool player_check_combo(player_t *player, const input_sequence_t *seq)
 {
     if (seq->count <= 0) return false;
 
-    int   history_len        = lenof_arr(player->input_history);
-    int   seq_step           = seq->count - 1;        // Start from the LAST step of sequence
+    int32_t history_len      = lenof_arr(player->input_history);
+    int32_t seq_step         = seq->count - 1;        // Start from the LAST step of sequence
     float newest_time        = player->input_timer;   // Newest input time
-    const float COMBO_WINDOW = 0.5f;                  // Max seconds between each input in the sequence
+    const float COMBO_WINDOW = 0.60f;                  // Max seconds between each input in the sequence
 
     // walk history from newest [last] to oldest [0]
-    for (int i = history_len - 1; i >= 0 && seq_step >= 0; i--)
+    for (int32_t i = (history_len - 1); i >= 0 && seq_step >= 0; i--)
     {
         const input_actions_t action = player->input_history[i];
         const float timestamp        = player->input_timestamps[i];
@@ -153,7 +153,10 @@ void player_record_input(player_t *player, float delta_time)
     // Shift history: oldest <- newest  
     const uint32_t last = lenof_arr(player->input_history) - 1;
     for_range_i(last)
-        player->input_history[i] = player->input_history[i + 1];
+    {
+        player->input_history[i]    = player->input_history[i + 1];
+        player->input_timestamps[i] = player->input_timestamps[i + 1];
+    }
         
     input_actions_t input_action = INPUT_NONE;  // Bitfield for input_actions_t  
     for (uint32_t i = 0, flag = 1; i < BUTTON_COUNT; i++, flag <<= 1)
@@ -175,9 +178,9 @@ bool init_players(player_t player[2], input_t *input)
         SDL_SCANCODE_S,
         SDL_SCANCODE_D,
         SDL_SCANCODE_A,
+        SDL_SCANCODE_F,
         SDL_SCANCODE_G,
         SDL_SCANCODE_H,
-        SDL_SCANCODE_J,
     };
     const SDL_Scancode keys_p2[] = 
     {

@@ -1,6 +1,4 @@
 #include "game.h"
-//#include <utils/loging.h>
-//#include <utils/macros.h>
 
 int main(int argc, char **argv) 
 {

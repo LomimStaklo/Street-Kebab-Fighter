@@ -18,7 +18,7 @@ def run_cmd(cmd: str, msg: str) -> None:
         exit(1)
 
 # ---- CONFIG ------------------------------------------------------------------------------
-cc: str       = "gcc" # clang / gcc
+cc: str       = "clang" # clang / gcc
 src: str      = "src/*.c"
 flags: str    = "-std=c99 -Wall -Wextra -Wno-#warnings -Wshadow -pedantic -fstack-protector -O1"
 lib_path: str = "src/lib"

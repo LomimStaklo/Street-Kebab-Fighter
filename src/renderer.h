@@ -168,7 +168,8 @@ bool init_renderer(renderer_t *renderer, SDL_Window *window)
         return false;
     
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-    
+    SDL_SetRenderDrawBlendMode(renderer->sdl_renderer, SDL_BLENDMODE_BLEND);
+
     renderer->game_screen = SDL_CreateTexture(
         renderer->sdl_renderer, 
         SDL_PIXELFORMAT_RGBA8888,
@@ -176,7 +177,8 @@ bool init_renderer(renderer_t *renderer, SDL_Window *window)
         SCREEN_WIDTH, 
         SCREEN_HEIGHT
     );
-
+    
+    SDL_SetTextureBlendMode(renderer->game_screen, SDL_BLENDMODE_BLEND);
     renderer->font_texture = load_font_from_atlas(renderer);
     
     return true;
@@ -305,7 +307,7 @@ void renderer_present(renderer_t *renderer)
                         cmd->rect.col.r, 
                         cmd->rect.col.g, 
                         cmd->rect.col.b, 
-                        255
+                        cmd->rect.col.a
                     );
 
                     if(cmd->rect.is_filled) 

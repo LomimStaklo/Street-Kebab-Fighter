@@ -48,11 +48,10 @@ void init_play_state(play_state_t *play, renderer_t *renderer, player_t players[
 
     // TODO: Make selecting system
     const fighter_t *boke = load_character(renderer, "boke");
-    if (!boke)
-        printf("Boke nije loadan\n");
+    assert((boke != NULL) && "atlas_boke.png not loaded");
 
     play->player_right->fighter = *boke;
-    play->player_left->fighter = *boke;
+    play->player_left->fighter  = *boke;
 }
 
 void play_on_enter(play_state_t *play)
@@ -68,15 +67,6 @@ void play_update(play_state_t *play, float delta_time)
 {
     player_t *p1 = play->player_right; 
     player_t *p2 = play->player_left; 
-
-    player_record_input(p1, delta_time);
-    player_record_input(p2, delta_time);
-
-    fighter_update(p1, &p1->fighter, delta_time);
-    fighter_update(p2, &p2->fighter, delta_time);
-    
-    fighter_update_animation(&p1->fighter, delta_time);
-    fighter_update_animation(&p2->fighter, delta_time);
     
     if (p1->fighter.position_x > p2->fighter.position_x)
     {
@@ -87,16 +77,18 @@ void play_update(play_state_t *play, float delta_time)
         p1->fighter.facing_right = true;
         p2->fighter.facing_right = false;
     }
-    
 
-    //if (play->player_right->fighter.velocity_x > 0)
-    //    play->player_right->fighter.facing_right = true;
-    //else if (play->player_right->fighter.velocity_x < 0)
-    //    play->player_right->fighter.facing_right = false;
+    player_record_input(p1, delta_time);
+    player_record_input(p2, delta_time);
+
+    fighter_update(p1, &p1->fighter, delta_time);
+    fighter_update(p2, &p2->fighter, delta_time);
 }
 
 void play_render(play_state_t *play, renderer_t *renderer)
 {   
+    renderer_start_drawing(renderer);
+    
     fighter_t *fighter = &play->player_right->fighter;
     fighter_t *def = &play->player_left->fighter;
     texture_t bg_img = play->background;
@@ -105,30 +97,42 @@ void play_render(play_state_t *play, renderer_t *renderer)
     
     #define X(name) (fighter->state == name) ? #name :  
         
-    snprintf(buff, sizeof(buff), "%s\nANIM_ID:%d GND:%d\nPOS:%.1f, %.1f", 
-        STATE_XLIST "None", 
+    snprintf(buff, sizeof(buff), "HP,P1:%u             HP,P2:%u\n%s\nANIM_ID:%d ATK_ID:%d\nATK_DUR:%.1f", 
+        fighter->hp,def->hp,
+        STATE_XLIST "None",  
         fighter->animation_id,
-        fighter->is_grounded,
-        fighter->position_x, fighter->position_y
+        fighter->curr_attack_id,
+        fighter->active_atk_duration
     );  
     #undef X
     
+    const frame_data_t *col_atk = fighter_get_frame_data(fighter);
+    const frame_data_t *col_def = fighter_get_frame_data(def);
+    
+    for_range_i(col_atk->count_hitboxs)
+    {
+        SDL_Rect hit = to_world_rect(fighter, col_atk->hitboxs[i]);
+        renderer_draw_rect(renderer, LAYER_UI1, &hit, COLOR_RED, false);
+        hit = to_world_rect(fighter, col_def->hitboxs[i]);
+        renderer_draw_rect(renderer, LAYER_UI1, &hit, COLOR_RED, false);
+    }    
+    for_range_j(col_def->count_hurtboxs)
+    {
+        SDL_Rect hurt = to_world_rect(fighter, col_atk->hurtboxs[j]);
+        renderer_draw_rect(renderer, LAYER_UI1, &hurt, COLOR_GREEN, false);
+        hurt = to_world_rect(def, col_def->hurtboxs[j]);
+        renderer_draw_rect(renderer, LAYER_UI1, &hurt, COLOR_GREEN, false);
+    }
     SDL_Point p1 = {fighter->position_x, fighter->position_y}, 
               p2 = {fighter->position_x + fighter->velocity_x * 0.16,
                     fighter->position_y + fighter->velocity_y * 0.16};
-    
-    const frame_collision_t *collis = fighter_get_collision(fighter);
-    SDL_Rect hurt = to_world_rect(fighter, collis->hurtboxs[0]);
-    
-    renderer_start_drawing(renderer);
+    renderer_draw_line(renderer, LAYER_UI1, p1, p2, COLOR_BLUE);
 
     renderer_draw_fighter(renderer, fighter);
     renderer_draw_fighter(renderer, def);
     
     renderer_draw_texture(renderer, LAYER_BACKGROUND, bg_img, NULL, 0.0, SDL_FLIP_NONE);
     renderer_draw_text(renderer, LAYER_ENTITY, (const char *)buff, 20, 20, 20, 20, COLOR_WHITE);
-    renderer_draw_rect(renderer, LAYER_UI1, &hurt, (SDL_Color){0,255,0,255}, false); 
-    renderer_draw_line(renderer, LAYER_UI1, p1, p2, (SDL_Color){0,0,255,255});
     
     renderer_present(renderer);
 }
