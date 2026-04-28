@@ -107,6 +107,22 @@ void player_record_input(player_t *player, float delta_time);
 
 #include <utils/macros.h>
 
+input_actions_t input_left_right_swap(bool is_facing_right, input_actions_t in)
+{
+    if (!is_facing_right)
+    {
+        if (!(in & INPUT_PRESSED_LEFT) != !(in & INPUT_PRESSED_RIGHT)) 
+            in ^= (INPUT_PRESSED_LEFT | INPUT_PRESSED_RIGHT);
+        
+        if (!(in & INPUT_HOLDING_LEFT) != !(in & INPUT_HOLDING_RIGHT)) 
+            in ^= (INPUT_HOLDING_LEFT | INPUT_HOLDING_RIGHT);
+        
+        if (!(in & INPUT_RELEASED_LEFT) != !(in & INPUT_RELEASED_RIGHT)) 
+            in ^= (INPUT_RELEASED_LEFT | INPUT_RELEASED_RIGHT);
+    }
+    return in;
+}
+
 bool player_check_combo(player_t *player, const input_sequence_t *seq)
 {
     if (seq->count <= 0) return false;
@@ -114,12 +130,14 @@ bool player_check_combo(player_t *player, const input_sequence_t *seq)
     int32_t history_len      = lenof_arr(player->input_history);
     int32_t seq_step         = seq->count - 1;        // Start from the LAST step of sequence
     float newest_time        = player->input_timer;   // Newest input time
-    const float COMBO_WINDOW = 0.60f;                  // Max seconds between each input in the sequence
+    const float COMBO_WINDOW = 0.50f;                  // Max seconds between each input in the sequence
+    // The combo depends on fighters facing direction
+    const bool do_swap = player->fighter.facing_right; 
 
     // walk history from newest [last] to oldest [0]
     for (int32_t i = (history_len - 1); i >= 0 && seq_step >= 0; i--)
     {
-        const input_actions_t action = player->input_history[i];
+        const input_actions_t action = input_left_right_swap(do_swap, player->input_history[i]);
         const float timestamp        = player->input_timestamps[i];
 
         // skip frames with no relevant input

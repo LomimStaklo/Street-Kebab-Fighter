@@ -107,6 +107,9 @@ typedef struct attack_t
     float recoil_x, recoil_y;          // Push force on attacker (forward launch if negative)
     float stun_duration; // Duration of an attack and its stun effect on enemy
     
+    uint8_t startup_frames;
+    uint8_t active_frames;
+
     attack_trigger_t triger;
     attack_flags_t flags;
     animation_id_t animation_id;
@@ -175,7 +178,7 @@ typedef struct fighter_t
     float walk_speed;    
     
     // ---- STATS AND VARS ------------------------------------------------------------
-    uint32_t hp;
+    int32_t hp;
     uint32_t ragebait_meter;
 
     float position_x, position_y;
@@ -186,7 +189,7 @@ typedef struct fighter_t
 
     bool facing_right;
     bool is_grounded;
-
+    bool hit_landed;   
     // Attack stats
     attack_id_t curr_attack_id;   // Current attack
     attack_t attacks[ATK_ID_COUNT];
@@ -197,7 +200,7 @@ void fighter_update(struct player_t *player, fighter_t *fighter, float delta_tim
 void fighter_update_animation(fighter_t *fighter, float delta_time);
 
 const frame_data_t *fighter_get_frame_data(fighter_t *fighter);
-void renderer_draw_fighter(renderer_t *renderer, fighter_t *fighter);
+//void renderer_draw_fighter(renderer_t *renderer, fighter_t *fighter);
 
 // For debug
 #define STATE_XLIST \
@@ -282,22 +285,20 @@ void fighter_set_state(fighter_t *fighter, fighter_state_t next_state)
     fighter->state_timer = 0.0f;
 }
 
-void fighter_set_attack(fighter_t *fighter, attack_id_t atk_id)
+void fighter_set_attack(fighter_t *fighter, attack_id_t id)
 {
-    if (atk_id == ATK_ID_NONE) 
+    fighter->curr_attack_id = id;
+    fighter->hit_landed     = false; // fresh swing, hasn't hit yet
+
+    if (id == ATK_ID_NONE)
     {
-        fighter->curr_attack_id      = ATK_ID_NONE;
         fighter->active_atk_duration = 0.0f;
         return;
     }
-    
-    // Only change if attack can be canceled
-    const attack_t *attack = &fighter->attacks[atk_id]; 
-    //if (!(attack->flags & ATK_FLAG_CANCEABLE)) return;
 
-    const animation_t *anim      = &fighter->visuals->animations[attack->animation_id]; // correct array index
-    fighter->curr_attack_id      = atk_id;
-    fighter->active_atk_duration = anim->frame_duration * anim->frame_count;
+    const attack_t    *atk  = &fighter->attacks[id];
+    const animation_t *anim = &fighter->visuals->animations[atk->animation_id];
+    fighter->active_atk_duration = anim->frame_duration * (float)anim->frame_count;
 }
 
 void fighter_update(player_t *player, fighter_t *fighter, float delta_time)
@@ -324,7 +325,8 @@ void fighter_update(player_t *player, fighter_t *fighter, float delta_time)
             fighter_set_state(fighter, STATE_IDLE);
     }
 
-    const input_actions_t input  = player_get_input(player);     // Current player input
+    const input_actions_t input = player_get_input(player);     // Current player input
+    const input_actions_t swaped_input = input_left_right_swap(fighter->facing_right, input); 
     const uint8_t can_fighter_do = can_state_do[fighter->state]; // What state is alowed to do
 
     // TODO: fix the mess with some kind on switch statement
@@ -377,13 +379,12 @@ void fighter_update(player_t *player, fighter_t *fighter, float delta_time)
         } 
         
         // ---- BLOCK -----------------------------------------------------------------------
-        if (((input & INPUT_HOLDING_BLOCK) == INPUT_HOLDING_BLOCK) && can_fighter_do & CAN_BLOCK)
+        if (((swaped_input & INPUT_HOLDING_BLOCK) == INPUT_HOLDING_BLOCK) && can_fighter_do & CAN_BLOCK)
         {
             fighter_set_state(
                 fighter,
                 crouching ? STATE_CROUCH_BLOCK : STATE_STAND_BLOCK
             );
-            fighter_set_attack(fighter, ATK_ID_NONE);
         }
         // ---- JUMP ------------------------------------------------------------------------
         if (input & INPUT_PRESSED_UP && can_fighter_do & CAN_JUMP)
@@ -451,7 +452,7 @@ void fighter_update(player_t *player, fighter_t *fighter, float delta_time)
         {
             fighter->velocity_x = 0.0f;
             
-            if (!((input & INPUT_HOLDING_BLOCK) == INPUT_HOLDING_BLOCK))
+            if (!((swaped_input & INPUT_HOLDING_BLOCK) == INPUT_HOLDING_BLOCK))
                 fighter_set_state(fighter, STATE_IDLE);
 
             if (input & INPUT_HOLDING_DOWN) fighter_set_state(fighter, STATE_CROUCH);
@@ -461,7 +462,7 @@ void fighter_update(player_t *player, fighter_t *fighter, float delta_time)
         case STATE_CROUCH_BLOCK: 
         {
             fighter->velocity_x = 0.0f;
-            if (!((input & INPUT_HOLDING_BLOCK) == INPUT_HOLDING_BLOCK)) 
+            if (!((swaped_input & INPUT_HOLDING_BLOCK) == INPUT_HOLDING_BLOCK)) 
                 fighter_set_state(fighter, STATE_CROUCH);
             
             if (!(input & INPUT_HOLDING_DOWN)) fighter_set_state(fighter, STATE_STAND_BLOCK);
@@ -510,7 +511,6 @@ void fighter_update(player_t *player, fighter_t *fighter, float delta_time)
             if (fighter->state_timer >= fighter->active_atk_duration)
             {
                 fighter_set_state(fighter, STATE_AIRBORNE);
-                fighter_set_attack(fighter, ATK_ID_NONE);
             }    
             break;
         }
@@ -522,7 +522,6 @@ void fighter_update(player_t *player, fighter_t *fighter, float delta_time)
             if (fighter->state_timer >= fighter->active_atk_duration)
             {
                 fighter_set_state(fighter, STATE_CROUCH);
-                fighter_set_attack(fighter, ATK_ID_NONE);
             }
             break;
         }
@@ -535,7 +534,6 @@ void fighter_update(player_t *player, fighter_t *fighter, float delta_time)
             if (fighter->state_timer >= fighter->active_atk_duration)
             {
                 fighter_set_state(fighter, STATE_IDLE);
-                fighter_set_attack(fighter, ATK_ID_NONE);
             }
             break; 
         }
@@ -651,27 +649,27 @@ SDL_Rect to_world_rect(fighter_t *fighter, SDL_Rect local)
     float sprite_left, sprite_top;
 
     if (fighter->facing_right)
-        sprite_left = fighter->position_x - frame->offset_x;
+        sprite_left = fighter->position_x - (float)frame->offset_x;
     else
         // flipped: offset_x measured from right edge instead
-        sprite_left = fighter->position_x - (frame->src.w - frame->offset_x);
+        sprite_left = fighter->position_x - (float)(frame->src.w - frame->offset_x);
 
-    sprite_top = fighter->position_y - frame->offset_y;
+    sprite_top = fighter->position_y - (float)frame->offset_y;
 
     SDL_Rect world;
 
     if (fighter->facing_right)
     {
-        world.x = (int32_t)(sprite_left + local.x);
+        world.x = (int32_t)sprite_left + local.x;
     }
     else
     {
         // mirror the box horizontally within the sprite
         // local.x is from left edge of sprite, when flipped it becomes from right edge
-        world.x = (int32_t)(sprite_left + (frame->src.w - local.x - local.w));
+        world.x = (int32_t)sprite_left + (frame->src.w - local.x - local.w);
     }
 
-    world.y = (int32_t)(sprite_top  + local.y);
+    world.y = (int32_t)sprite_top  + local.y;
     world.w = local.w;
     world.h = local.h;
 
@@ -699,41 +697,92 @@ bool fighter_check_hit(fighter_t *atk, fighter_t *def)
 }
 
 // TODO: make this
-//void fighter_apply_hit(fighter_t *atk, fighter_t *def)
-//{
-//    switch (atk->curr_attack_id)
-//    {
-//        case :
-//        /* code */
-//        break;
-//    }
-//}
+void fighter_check_attack(fighter_t *atk, fighter_t *def, void *ctx)
+{
+    if (atk->curr_attack_id == ATK_ID_NONE) return;
 
-void renderer_draw_fighter(renderer_t *renderer, fighter_t *fighter)
-{   
-    const frame_data_t *frame = fighter_get_frame_data(fighter);
+    const attack_t *attack = &atk->attacks[atk->curr_attack_id];
+
+    // ---- HITBOX WINDOW ---------------------------------------------------
+    // Only check collision during active frames.
+    // animation_frame is 0-based so frame 0 is the first frame.
+    int32_t frame = atk->animation_frame;
+    bool in_active_window = (frame >= (int32_t)attack->startup_frames &&
+                             frame <  (int32_t)(attack->startup_frames + attack->active_frames));
+
+    if (!in_active_window) return;
+
+    // ---- TRIGGER ---------------------------------------------------------
+    bool hit = fighter_check_hit(atk, def);
+    bool blocked = false; 
     
-    SDL_Rect dst; 
+    if (((def->state == STATE_STAND_BLOCK)  && (!(attack->flags & ATK_FLAG_CANT_BLOCK_STANDING))) || 
+        ((def->state == STATE_CROUCH_BLOCK) && (!(attack->flags & ATK_FLAG_CANT_BLOCK_CROUCHING)))
+    ) blocked = true; 
 
-    if (fighter->facing_right) 
-        dst.x = fighter->position_x - frame->offset_x;
-    else
-        dst.x = fighter->position_x - (frame->src.w - frame->offset_x);
+    switch (attack->triger)
+    {
+        case ATK_TRIGGER_ON_HIT:
+            if (!hit) return;
+            break;
 
-    dst.y = fighter->position_y - frame->offset_y;
-    dst.w = frame->src.w; 
-    dst.h = frame->src.h;
+        case ATK_TRIGGER_ON_COUNTER:
+            // only connects if defender is also mid-attack
+            if (!hit) return;
+            if (def->curr_attack_id == ATK_ID_NONE) return;
+            break;
+
+        case ATK_TRIGGER_ON_WHIFF:
+            // fires once when attack ends without landing
+            if (atk->hit_landed) return;
+            if (atk->state_timer < atk->active_atk_duration) return;
+            break;
+
+        case ATK_TRIGGER_ON_BLOCK:
+            // TODO: block check
+            return;
+    }
+
+    // ---- APPLY HIT -------------------------------------------------------
+    // hit_landed stops damage being applied every frame boxes overlap
+    if (atk->hit_landed) return;
+    atk->hit_landed = true;
+
+    // damage
+    if (!blocked)
+        def->hp -= attack->damage;
+
+    // knockback on defender — direction from attacker's facing
+    float dir        = atk->facing_right ? 1.0f : -1.0f;
+    def->velocity_x  = dir * attack->knockback_x;
+    def->velocity_y  =       attack->knockback_y; // negative = upward
+
+    // recoil on attacker
+    atk->velocity_x += dir * attack->recoil_x;
+    atk->velocity_y +=       attack->recoil_y;
+
+    // stun state on defender
+    if (!blocked)
+        def->active_stun_duration = attack->stun_duration;
     
-    // fighter->visuals.atlas_tex
-    renderer_draw_texture(
-        renderer, 
-        LAYER_ENTITY,
-        renderer_create_subtexture(fighter->visuals->atlas_tex.handle, frame->src),
-        &dst, 
-        0.0, 
-        fighter->facing_right ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL
-    ); 
+    if (!blocked)
+    {
+        if (attack->flags & ATK_FLAG_KNOCKDOWN)
+           fighter_set_state(def, STATE_KNOCKDOWN);
+        else
+            fighter_set_state(def, STATE_HITSTUN);
+    }
+
+    // custom behaviour
+    if (attack->func != NULL)
+        attack->func(atk, def, ctx);
+
+    if (atk->state_timer >= atk->active_atk_duration)
+    {
+        fighter_set_attack(atk, ATK_ID_NONE);
+    }
 }
+
 
 #endif /* FAJTER_IMPLEMENTATION */
 

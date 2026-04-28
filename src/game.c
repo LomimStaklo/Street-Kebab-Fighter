@@ -82,7 +82,7 @@ void game_time_init(game_time_t *time, int32_t target_fps)
     time->frame_start     = SDL_GetPerformanceCounter();
     time->delta_time      = 0.0f;
     time->target_frame_s  = 1.0f / (float)target_fps;
-    time->target_frame_ms = 1000 / target_fps;
+    time->target_frame_ms = (uint32_t)(1000 / target_fps);
 }
 
 void handle_game_time(game_time_t *time)

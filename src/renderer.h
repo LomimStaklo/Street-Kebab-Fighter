@@ -148,6 +148,9 @@ void renderer_draw_text(
     SDL_Color color
 );
 
+struct fighter_t;
+void renderer_draw_fighter(renderer_t *renderer, struct fighter_t *fighter);
+
 // ================
 //  IMPLEMENTATION
 // ================
@@ -158,6 +161,7 @@ void renderer_draw_text(
 #include <utils/macros.h>
 #include <string.h>
 #include "font_atlas.h"
+#include "fajter.h"
 
 #define RENDERER_FLAGS (SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC)
 
@@ -227,7 +231,7 @@ texture_t renderer_load_texture(renderer_t *renderer, const char *filepath)
     for_range_i(renderer->texture_count)
         if (renderer->textures[i] == NULL)
         {   
-            texture.handle = i;
+            texture.handle = (texture_handle_t)i;
             renderer->textures[i] = rend_tex;
             SDL_QueryTexture(
                 rend_tex, 
@@ -356,8 +360,8 @@ void renderer_present(renderer_t *renderer)
 
                     for_range_j(text_len)
                     {
-                        unsigned char chr = cmd->text.str[j];
-                        if (chr < 32 || chr >= 128)
+                        const char chr = cmd->text.str[j];
+                        if (chr < 32 || chr >= 127)
                         {
                             if (chr == '\n')
                             {
@@ -505,6 +509,31 @@ void renderer_draw_text(
         }
     };
     renderer->command_count[layer] += 1;
+}
+void renderer_draw_fighter(renderer_t *renderer, fighter_t *fighter)
+{   
+    const frame_data_t *frame = fighter_get_frame_data(fighter);
+    
+    SDL_Rect dst; 
+
+    if (fighter->facing_right) 
+        dst.x = (int32_t)fighter->position_x - frame->offset_x;
+    else
+        dst.x = (int32_t)fighter->position_x - (frame->src.w - frame->offset_x);
+
+    dst.y = (int32_t)fighter->position_y - frame->offset_y;
+    dst.w = frame->src.w; 
+    dst.h = frame->src.h;
+    
+    // fighter->visuals.atlas_tex
+    renderer_draw_texture(
+        renderer, 
+        LAYER_ENTITY,
+        renderer_create_subtexture(fighter->visuals->atlas_tex.handle, frame->src),
+        &dst, 
+        0.0, 
+        fighter->facing_right ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL
+    ); 
 }
 
 #endif /* RENDERER_IMPLEMENTATION */

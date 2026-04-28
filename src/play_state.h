@@ -80,7 +80,10 @@ void play_update(play_state_t *play, float delta_time)
 
     player_record_input(p1, delta_time);
     player_record_input(p2, delta_time);
-
+    
+    fighter_check_attack(&p1->fighter, &p2->fighter, NULL);
+    fighter_check_attack(&p2->fighter, &p1->fighter, NULL);
+    
     fighter_update(p1, &p1->fighter, delta_time);
     fighter_update(p2, &p2->fighter, delta_time);
 }
@@ -97,12 +100,12 @@ void play_render(play_state_t *play, renderer_t *renderer)
     
     #define X(name) (fighter->state == name) ? #name :  
         
-    snprintf(buff, sizeof(buff), "HP,P1:%u             HP,P2:%u\n%s\nANIM_ID:%d ATK_ID:%d\nATK_DUR:%.1f", 
+    snprintf(buff, sizeof(buff), "HP,P1:%d            HP,P2:%d\n%s\nANIM_ID:%d ATK_ID:%d\nATK_DUR:%.1f`", 
         fighter->hp,def->hp,
         STATE_XLIST "None",  
         fighter->animation_id,
         fighter->curr_attack_id,
-        fighter->active_atk_duration
+        (double)fighter->active_atk_duration
     );  
     #undef X
     
@@ -123,9 +126,9 @@ void play_render(play_state_t *play, renderer_t *renderer)
         hurt = to_world_rect(def, col_def->hurtboxs[j]);
         renderer_draw_rect(renderer, LAYER_UI1, &hurt, COLOR_GREEN, false);
     }
-    SDL_Point p1 = {fighter->position_x, fighter->position_y}, 
-              p2 = {fighter->position_x + fighter->velocity_x * 0.16,
-                    fighter->position_y + fighter->velocity_y * 0.16};
+    SDL_Point p1 = {(int32_t)fighter->position_x, (int32_t)fighter->position_y}, 
+              p2 = {(int32_t)(fighter->position_x + fighter->velocity_x * 0.16f),
+                    (int32_t)(fighter->position_y + fighter->velocity_y * 0.16f)};
     renderer_draw_line(renderer, LAYER_UI1, p1, p2, COLOR_BLUE);
 
     renderer_draw_fighter(renderer, fighter);

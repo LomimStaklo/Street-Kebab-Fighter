@@ -18,9 +18,9 @@ def run_cmd(cmd: str, msg: str) -> None:
         exit(1)
 
 # ---- CONFIG ------------------------------------------------------------------------------
-cc: str       = "clang" # clang / gcc
+cc: str       = "gcc" # clang / gcc
 src: str      = "src/*.c"
-flags: str    = "-std=c99 -Wall -Wextra -Wno-#warnings -Wshadow -pedantic -fstack-protector -O1"
+flags: str    = "-std=c99 -Wall -Wextra -Wswitch-enum -Wconversion -Wsign-conversion -Wdouble-promotion -Wundef -Wuninitialized -Wshadow -Wnull-dereference -Wno-#warnings -pedantic -fstack-protector -O1"
 lib_path: str = "src/lib"
 inc_path: str = "src/include"
 
@@ -42,7 +42,7 @@ for i in range(1, argc):
         case "-comp":   do_comp = True
         case "-run":    do_run = True
         case "-dbg":    dbg_info = True
-        case "-static": 
+        case "-comp-static": 
             do_comp = True
             is_static = True
         case _: print("[!]", "Unknown instrustion", argv[i])

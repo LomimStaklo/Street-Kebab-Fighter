@@ -40,6 +40,7 @@ static fighter_visuals_t visuals_boke =
         [ANIM_CROUCH]        = {4,  4, 0.05f, false},
         [ANIM_WALK]          = {0,  3, 0.09f, true},
         
+        [ANIM_KNOCKDOWN]     = {5,  1, 1.05f, false},
         // Animations with size 64x96
         [ANIM_STAND_LIGHT]   = {21, 2, 0.07f, false},
         [ANIM_COMBO1]        = {4,  2, 0.05f, false},
@@ -135,8 +136,11 @@ const fighter_t fajter_boke =
         {
             .damage = 10,
             .stun_duration = 0.0f,
-            .knockback_x   = 20.0f, .knockback_y = 0.0f,
+            .knockback_x   = 50.0f, .knockback_y = 0.0f,
             .recoil_x      = 0.0f,  .recoil_y    = 0.0f,
+            
+            .startup_frames = 1,
+            .active_frames  = 1,
             
             .animation_id = ANIM_STAND_LIGHT,
             .triger       = ATK_TRIGGER_ON_HIT,
@@ -151,6 +155,9 @@ const fighter_t fajter_boke =
             .knockback_x   = 20.0f, .knockback_y = 0.0f,
             .recoil_x      = 0.0f,  .recoil_y    = 0.0f,
         
+            .startup_frames = 0,
+            .active_frames  = 0,
+            
             .animation_id = ANIM_STAND_MEDIUM,
             .triger       = ATK_TRIGGER_ON_HIT,
             .flags        = ATK_FLAG_NONE,
@@ -164,6 +171,9 @@ const fighter_t fajter_boke =
             .knockback_x   = 20.0f, .knockback_y = 0.0f,
             .recoil_x      = 0.0f,  .recoil_y    = 0.0f,
             
+            .startup_frames = 0,
+            .active_frames  = 0,
+
             .animation_id = ANIM_STAND_HEAVY,
             .triger       = ATK_TRIGGER_ON_HIT,
             .flags        = ATK_FLAG_KNOCKDOWN,
@@ -172,14 +182,17 @@ const fighter_t fajter_boke =
         },
         [ATK_ID_COMBO1] = 
         {
-            .damage = 25, 
+            .damage = 0, 
             .stun_duration = 0.0f,
-            .knockback_x   = 20.0f, .knockback_y = 0.0f,
-            .recoil_x      = 0.0f,  .recoil_y    = 0.0f,
+            .knockback_x   = 20.0f,  .knockback_y = 0.0f,
+            .recoil_x      = 1500.0f, .recoil_y    = 0.0f,
+            
+            .startup_frames = 0,
+            .active_frames  = 2,
             
             .animation_id = ANIM_COMBO1,
-            .triger       = ATK_TRIGGER_ON_HIT,
-            .flags        = ATK_FLAG_KNOCKDOWN | ATK_FLAG_CANCEABLE,
+            .triger       = ATK_TRIGGER_ON_WHIFF,
+            .flags        = ATK_FLAG_KNOCKDOWN,
             .func = NULL, 
             .sequence = {{INPUT_PRESSED_RIGHT, INPUT_PRESSED_RIGHT}, 2}
         },
