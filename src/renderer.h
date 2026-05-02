@@ -14,6 +14,9 @@
 //  DECLARATION
 // =============
 
+#define IMAGE_PATH(file) "assets/images/"file
+#define SOUND_PATH(file) "assets/sounds/"file
+
 // ---- SCREEN SIZE ------
 #define SCREEN_WIDTH  640
 #define SCREEN_HEIGHT 360
@@ -21,9 +24,9 @@
 #define MAX_RENDERER_CMDS 1024
 #define MAX_RENDERER_TEXTURES 256
 
-#define COLOR_RED (SDL_Color){255,0,0,255}
+#define COLOR_RED   (SDL_Color){255,0,0,255}
 #define COLOR_GREEN (SDL_Color){0,255,0,255}
-#define COLOR_BLUE (SDL_Color){0,0,255,255}
+#define COLOR_BLUE  (SDL_Color){0,0,255,255}
 #define COLOR_WHITE (SDL_Color){255,255,255,255}
 #define COLOR_BLACK (SDL_Color){0,0,0,255}
 
@@ -36,15 +39,11 @@ typedef enum render_layer_t
     LAYER_COUNT,
 } render_layer_t;
 
+/**
+ * Index into loaded renderers textures
+ */
 typedef int32_t texture_handle_t;
 #define INVALID_TEXTURE_HANDLE (-1)
-
-// User texture
-typedef struct texture_t
-{
-    texture_handle_t handle; // Index into array of textures
-    SDL_Rect src;
-} texture_t;
 
 typedef enum renderer_command_id_t 
 {
@@ -61,7 +60,8 @@ typedef union renderer_command_t
     struct 
     {
         uint32_t type;
-        texture_t tex;  // Texture to be rendered
+        texture_handle_t handle;  // Texture to be rendered
+        SDL_Rect src;
         SDL_Rect dst;
         double rotation;
         SDL_RendererFlip flip;
@@ -105,9 +105,8 @@ typedef struct renderer_t
 bool init_renderer(renderer_t *renderer, SDL_Window *window);
 void destroy_renderer(renderer_t *renderer); // Destroys the renderer with all textures
 
-texture_t renderer_load_texture(renderer_t *renderer, const char *filepath);
+texture_handle_t renderer_load_texture(renderer_t *renderer, const char *filename);
 bool renderer_unload_texture(renderer_t *renderer, texture_handle_t tex_handle);
-texture_t renderer_create_subtexture(texture_handle_t tex_handle, SDL_Rect src);
 
 void renderer_start_drawing(renderer_t *renderer);
 void renderer_present(renderer_t *renderer);
@@ -115,7 +114,8 @@ void renderer_present(renderer_t *renderer);
 void renderer_draw_texture(
     renderer_t *renderer,
     render_layer_t layer,
-    texture_t texture,
+    texture_handle_t handle,
+    const SDL_Rect *src,
     const SDL_Rect *dst,
     double rotation,
     SDL_RendererFlip flip
@@ -208,38 +208,34 @@ void destroy_renderer(renderer_t *renderer)
     renderer->texture_count = 0;
 }
 
-texture_t renderer_load_texture(renderer_t *renderer, const char *filepath)
+texture_handle_t renderer_load_texture(renderer_t *renderer, const char *filename)
 {
-    texture_t texture = 
-    {
-        .handle = INVALID_TEXTURE_HANDLE,
-        .src = {0 ,0, 0, 0}
-    };
-    
-    if (renderer->texture_count >= MAX_RENDERER_TEXTURES) 
-        return texture;
+    texture_handle_t texture = INVALID_TEXTURE_HANDLE;
 
-    SDL_Surface *surf = IMG_Load(filepath);
-    if (!surf) return texture;
+    if (renderer->texture_count >= MAX_RENDERER_TEXTURES) 
+        return INVALID_TEXTURE_HANDLE;
+
+    SDL_Surface *surf = IMG_Load(filename);
+    if (!surf) return INVALID_TEXTURE_HANDLE;
 
     SDL_Texture *rend_tex = SDL_CreateTextureFromSurface(renderer->sdl_renderer, surf);
     SDL_FreeSurface(surf);
     
-    if (!rend_tex) return texture;
+    if (!rend_tex) return INVALID_TEXTURE_HANDLE;
     renderer->texture_count++;
     
     for_range_i(renderer->texture_count)
         if (renderer->textures[i] == NULL)
         {   
-            texture.handle = (texture_handle_t)i;
+            texture = (texture_handle_t)i;
             renderer->textures[i] = rend_tex;
-            SDL_QueryTexture(
-                rend_tex, 
-                NULL, 
-                NULL,
-                &texture.src.w,
-                &texture.src.h
-            );
+            //SDL_QueryTexture(
+            //    rend_tex, 
+            //    NULL, 
+            //    NULL,
+            //    &texture.src.w,
+            //    &texture.src.h
+            //);
             break;
         }
 
@@ -254,16 +250,6 @@ bool renderer_unload_texture(renderer_t *renderer, texture_handle_t tex_handle)
     SDL_DestroyTexture(renderer->textures[tex_handle]);
     renderer->textures[tex_handle] = NULL;
     return true;
-}
-
-texture_t renderer_create_subtexture(texture_handle_t tex_handle, SDL_Rect src)
-{
-    texture_t tex_tile = 
-    {
-        .handle = tex_handle,
-        .src = src,
-    };
-    return tex_tile;
 }
 
 void renderer_start_drawing(renderer_t *renderer)
@@ -289,13 +275,10 @@ void renderer_present(renderer_t *renderer)
                 // ---- TEXTURE -------------------------------------------------------------------------
                 case REND_CMD_TEXTURE:
                 {
-                    if (!is_in_range(0, (int32_t)renderer->texture_count, cmd->texture.tex.handle))
-                        continue;
-
                     SDL_RenderCopyEx(
                         renderer->sdl_renderer,
-                        renderer->textures[cmd->texture.tex.handle],
-                        &cmd->texture.tex.src,
+                        renderer->textures[cmd->texture.handle],
+                        &cmd->texture.src,
                         &cmd->texture.dst,
                         cmd->texture.rotation,
                         NULL,
@@ -398,28 +381,46 @@ void renderer_present(renderer_t *renderer)
 }
 
 // ---- TEXTURE -------------------------------------------------------------------------
-// if dst is NULL it gets rendered to whole screen
+// if dst or src is NULL it gets rendered to whole screen
 void renderer_draw_texture(
     renderer_t *renderer,
     render_layer_t layer,
-    texture_t texture,
+    texture_handle_t handle,
+    const SDL_Rect *src,
     const SDL_Rect *dst,
     double rotation,
     SDL_RendererFlip flip) 
 {
     if (renderer->command_count[layer] >= MAX_RENDERER_CMDS)
         return;
-        
+    
+    assert(is_in_range(0, (int32_t)renderer->texture_count, handle) &&
+            "Texture handle out of bounds");
+
+    SDL_Rect src_rect = {0, 0, 0, 0};
+    if (src == NULL)
+    {
+        SDL_QueryTexture(
+            renderer->textures[handle], 
+            NULL, 
+            NULL,
+            &src_rect.w,
+            &src_rect.h
+        );
+    } else
+        src_rect = *src;
+
     SDL_Rect dst_rect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
     if (dst != NULL)  
         dst_rect = *dst;
-    
+
     renderer->commands[layer][renderer->command_count[layer]] = (renderer_command_t) 
     {
         .texture = 
         {
             .type = REND_CMD_TEXTURE,
-            .tex = texture,
+            .handle = handle,
+            .src = src_rect,
             .dst = dst_rect,
             .rotation = rotation,
             .flip = flip,
@@ -510,9 +511,10 @@ void renderer_draw_text(
     };
     renderer->command_count[layer] += 1;
 }
+
 void renderer_draw_fighter(renderer_t *renderer, fighter_t *fighter)
 {   
-    const frame_data_t *frame = fighter_get_frame_data(fighter);
+    const anim_frame_t *frame = fighter_get_frame_data(fighter);
     
     SDL_Rect dst; 
 
@@ -529,7 +531,8 @@ void renderer_draw_fighter(renderer_t *renderer, fighter_t *fighter)
     renderer_draw_texture(
         renderer, 
         LAYER_ENTITY,
-        renderer_create_subtexture(fighter->visuals->atlas_tex.handle, frame->src),
+        fighter->visuals->atlas_tex, 
+        &frame->src,
         &dst, 
         0.0, 
         fighter->facing_right ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL

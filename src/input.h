@@ -127,7 +127,7 @@ bool player_check_combo(player_t *player, const input_sequence_t *seq)
 {
     if (seq->count <= 0) return false;
 
-    int32_t history_len      = lenof_arr(player->input_history);
+    int32_t history_len      = lenghtof(player->input_history);
     int32_t seq_step         = seq->count - 1;        // Start from the LAST step of sequence
     float newest_time        = player->input_timer;   // Newest input time
     const float COMBO_WINDOW = 0.50f;                  // Max seconds between each input in the sequence
@@ -161,7 +161,7 @@ bool player_check_combo(player_t *player, const input_sequence_t *seq)
 
 input_actions_t player_get_input(player_t *player)
 {
-    return player->input_history[lenof_arr(player->input_history) - 1]; 
+    return player->input_history[lenghtof(player->input_history) - 1]; 
 }
 
 void player_record_input(player_t *player, float delta_time)
@@ -169,7 +169,7 @@ void player_record_input(player_t *player, float delta_time)
     player->input_timer += delta_time;
     
     // Shift history: oldest <- newest  
-    const uint32_t last = lenof_arr(player->input_history) - 1;
+    const uint32_t last = lenghtof(player->input_history) - 1;
     for_range_i(last)
     {
         player->input_history[i]    = player->input_history[i + 1];
@@ -210,8 +210,8 @@ bool init_players(player_t player[2], input_t *input)
         SDL_SCANCODE_O,
         SDL_SCANCODE_P,
     };
-    if (lenof_arr(keys_p1) != (BUTTON_COUNT) || 
-        lenof_arr(keys_p2) != (BUTTON_COUNT))
+    if (lenghtof(keys_p1) != (BUTTON_COUNT) || 
+        lenghtof(keys_p2) != (BUTTON_COUNT))
     {
         return false;
     }

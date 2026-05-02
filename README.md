@@ -1,5 +1,9 @@
+# Street Kebab Fighter
+
+> *A 2D fighting game about settling disputes the old-fashioned way with your favorite characters from "Čaršija"*
+
 <p align="center">
-  <img src="images/SKF_logo.png" alt="Street Kebab Fighter Logo" width="128"/>
+  <img src="assets/images/SKF_logo.png" alt="Street Kebab Fighter Logo" width="128"/>
 </p>
 
 <p align="center">
@@ -8,11 +12,6 @@
   <img src="https://img.shields.io/badge/language-C-darkblue"/>
 </p>
 
-# Street Kebab Fighter
-
-> *A 2D fighting game about settling disputes the old-fashioned way with your favorite characters from "Čaršija"*
-
----
 > [!WARNING]
 > The game is still in development.
 
@@ -34,8 +33,6 @@
 | Heavy Attack | **H** | **P** |
 | Block | Backward + Light Attack |  Backward + Light Attack |
 
----
-
 ## Platform Support
 
 | Platform | Status |
@@ -43,41 +40,50 @@
 | Windows | ✅ Supported |
 | Linux | 🔜 Coming soon |
 
----
-
 ## Dependencies
 
 | Dependency | Version |
 |---|---|
 | SDL2 | *2.32.6* |
 | SDL2_image | *2.8.2* |
-| Python (build script) | *3.13.2+* |
-
----
 
 ## Build
 
-The game can be built using a Python script, but it only supports **gcc** or **clang** compilers.
+The game can be built using a "nob.h" (Tscoding: [Github](https://github.com/tsoding)) script, but it only supports **gcc** or **clang** compilers. 
 
-**Using the build script (recommended):**
+After installing the repo the game is built in 2 steps:
+1. Compiling the script once 
+2. Running nob to build the game
+
+If you want to know why would you even compile the script for building just to, build again, go look at repository of [nob.h](https://github.com/tsoding/nob.h).
+
+### Windows
+
+1. Open *Cmd* or *PowerShell* and check if you are in the root folder of the repo (something like: ...\path\to\Street-Kebab-Fighter or).
+Run this command to compile the script: 
 ```
-python build.py -comp -run
+gcc -o nob.exe nob.c
 ```
 
-**Manual GCC build (gcc or clang):**
+2. Then run the nob script with:
+
 ```
-gcc -o SKF.exe src/*.c -I src/include -L src/lib -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -std=c99 -Wall -Wextra -Wswitch-enum -Wconversion -Wsign-conversion -Wdouble-promotion -Wundef -Wuninitialized -Wshadow -Wnull-dereference -Wno-#warnings -pedantic -fstack-protector -O1 -mwindows -s
+.\nob -run
 ```
+
 ### Build options
 
-By default, the compilation is linked dynamically.  
-The *"-comp-static"* flag will link the game statically.
+Scrpit has a few flags like:
+- "-run" - Runs the game after compilation 
+- "-static" - Links the game statically instead of dynamically
+- "-dbg" - Compile with debug info
 
----
+By default gcc is used but you can replace it with clang if you want.
 
 ## Roadmap
 
 - [x] *Collision and attacking systems*
+- [x] *Build script with "nob.h"*
 - [ ] *Asset baking* - Allow compiling all assets directly into the game binary instead of loading them at runtime  
 - [ ] *Linux support*
 

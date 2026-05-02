@@ -7,7 +7,7 @@
 // Checks range includeing first number "from" but excludeing last "to" 
 #define is_in_range(from, to, value) (((from) <= (value)) && ((value) < (to)))
 #define to_str(name) #name
-#define lenof_arr(arr) (sizeof((arr)) / sizeof((arr)[0]))
+#define lenghtof(arr) (sizeof((arr)) / sizeof((arr)[0]))
 #define for_range_i(count) for (uint32_t i = 0; i < (count); i++)
 #define for_range_j(count) for (uint32_t j = 0; j < (count); j++)
 
@@ -59,7 +59,7 @@
  * 48x96 start at origin of (0, 0)
  * \returns Rectangle (SDL_Rect) of the tile in a atlas 
  */
-#define tile_48x96(idx) tile_from_atlas_xy(idx, 0, 0, 48, 96, 21)
-#define tile_64x96(idx) tile_from_atlas_xy(idx, 0, 96, 64, 96, 16)
+#define TILE_48x96(idx) (SDL_Rect) tile_from_atlas_xy(idx, 0, 0, 48, 96, 21)
+#define TILE_64x96(idx) (SDL_Rect) tile_from_atlas_xy(idx, 0, 96, 64, 96, 16)
 
 #endif /* !_MACROS_H */

@@ -4,9 +4,8 @@
 #define CHARACTERS_IMPLEMENTATION
 #define FAJTER_IMPLEMENTATION
 #define FONT_ATLAS_IMPLEMENTATION
+#define ASSETMNGR_IMPLEMENTATION
 #include "font_atlas.h"
-#include "fajter.h"
-#include "characters.h"
 #include "game.h"
 
 #include <utils/loging.h>
@@ -52,7 +51,7 @@ bool init_game(game_t *game)
         return false;
     }
     // Icon loading
-    SDL_Surface *ico = IMG_Load("images/SKF_icon.png");
+    SDL_Surface *ico = IMG_Load(IMAGE_PATH("SKF_icon.png"));
     if (ico)
     {
         SDL_SetWindowIcon(game->window, ico);

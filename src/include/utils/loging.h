@@ -2,6 +2,7 @@
 #define _LOGING_H
 
 #include <stdio.h>
+//#include "macros.h"
 
 #define GAME_LOG_FILE stderr
 
