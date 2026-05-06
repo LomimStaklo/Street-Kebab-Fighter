@@ -77,6 +77,7 @@ Scrpit has a few flags like:
 - "-run" - Runs the game after compilation 
 - "-static" - Links the game statically instead of dynamically
 - "-dbg" - Compile with debug info
+- "-cc" - Change the compiler with the name of next argument
 
 By default gcc is used but you can replace it with clang if you want.
 

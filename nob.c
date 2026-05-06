@@ -1,8 +1,6 @@
 #define NOB_IMPLEMENTATION 
 #include "nob.h"
 
-#define C_COMPILER "clang" // Options: (gcc/clang)
-
 // ---- WINDOWS ----------------------------------
 #ifdef _WIN32
 #define EXECUTABLE_NAME "SKF.exe"    
@@ -24,9 +22,11 @@ int main(int argc, char **argv)
 {
     NOB_GO_REBUILD_URSELF(argc, argv);
 
-    bool do_run    = false;
-    bool do_static = false;
-    bool do_debug  = false;
+    bool do_run          = false;
+    bool do_static       = false;
+    bool do_debug        = false;
+    
+    const char *compiler = "gcc";
 
     for (size_t i = 1; i < argc; i++)
     {
@@ -38,11 +38,14 @@ int main(int argc, char **argv)
 
         if (strcmp(argv[i], "-dbg") == 0)
             do_debug = true;
+        
+        if (strcmp(argv[i], "-cc") == 0)
+            compiler = (i + 1) <= argc ? argv[i + 1] : "gcc";
     }
 
     Nob_Cmd cmd = {0};
     
-    nob_cmd_append(&cmd, C_COMPILER);
+    nob_cmd_append(&cmd, compiler);
     nob_cmd_append(&cmd, "-o", EXECUTABLE_NAME);
     nob_cmd_append(&cmd, "src/main.c", "src/game.c");
     nob_cmd_append(&cmd, "-I", INCLUDE_DIR);
@@ -79,13 +82,19 @@ int main(int argc, char **argv)
 
     // --- FLAGS --------------------------------------------
     nob_cmd_append(&cmd, 
-        "-std=c99", "-O3", (do_debug) ? "-g" : "-s",
-        "-pedantic", "-fstack-protector",
+        "-std=c99", "-march=native", "-O3", (do_debug) ? "-g" : "-s",
+        "-pedantic", "-fstack-protector", 
         "-Wall", "-Wextra", "-Wshadow","-Wswitch-enum", "-Wconversion", "-Wsign-conversion", 
         "-Wdouble-promotion", "-Wundef", "-Wuninitialized",  "-Wnull-dereference","-Wno-#warnings",
+        "-Wformat=2", "-Wfloat-equal", "-Wcast-qual", "-Wcast-align", 
+        "-Wmissing-prototypes", "-Wstrict-prototypes", "-Wstrict-aliasing=2", 
+        "-Warray-bounds"
     );
-
+    
+    clock_t start = clock();
     if (!nob_cmd_run_sync(cmd)) return EXIT_FAILURE;
+    nob_log(NOB_INFO, "Comptime: %.2fs", (double)(clock() - start) / CLOCKS_PER_SEC);
+    
     if (do_run)
     {
         Nob_Cmd run_cmd = {0};

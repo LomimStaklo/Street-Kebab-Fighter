@@ -8,7 +8,8 @@
 #include "input.h"
 #include "renderer.h"
 
-typedef struct {
+typedef struct game_time_t
+{
     uint64_t frequency;          // Cache frequency (it's constant)
     uint64_t frame_start;        // Use uint64_t for performance counter
     float    delta_time;

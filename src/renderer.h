@@ -15,7 +15,7 @@
 // =============
 
 #define IMAGE_PATH(file) "assets/images/"file
-#define SOUND_PATH(file) "assets/sounds/"file
+#define SOUND_PATH(file) "assets/audio/"file
 
 // ---- SCREEN SIZE ------
 #define SCREEN_WIDTH  640
@@ -48,6 +48,7 @@ typedef int32_t texture_handle_t;
 typedef enum renderer_command_id_t 
 {
     REND_CMD_TEXTURE = 0,
+    REND_CMD_TEXTURE_MOD,
     REND_CMD_RECT,
     REND_CMD_LINE,
     REND_CMD_TEXT
@@ -66,6 +67,16 @@ typedef union renderer_command_t
         double rotation;
         SDL_RendererFlip flip;
     } texture;
+    struct 
+    {
+        uint32_t type;
+        texture_handle_t handle;  // Texture to be rendered
+        SDL_Rect src;
+        SDL_Rect dst;
+        double rotation;
+        SDL_RendererFlip flip;
+        SDL_Color col;
+    } texture_mod;
     struct 
     {
         uint32_t type;
@@ -108,6 +119,7 @@ void destroy_renderer(renderer_t *renderer); // Destroys the renderer with all t
 texture_handle_t renderer_load_texture(renderer_t *renderer, const char *filename);
 bool renderer_unload_texture(renderer_t *renderer, texture_handle_t tex_handle);
 
+SDL_Texture *renderer_handle_to_texture(renderer_t *renderer, texture_handle_t handle);
 void renderer_start_drawing(renderer_t *renderer);
 void renderer_present(renderer_t *renderer);
 
@@ -120,6 +132,18 @@ void renderer_draw_texture(
     double rotation,
     SDL_RendererFlip flip
 );
+
+void renderer_draw_texture_mod(
+    renderer_t *renderer,
+    render_layer_t layer,
+    texture_handle_t handle,
+    const SDL_Rect *src,
+    const SDL_Rect *dst,
+    double rotation,
+    SDL_RendererFlip flip,
+    SDL_Color col
+);
+
 
 void renderer_draw_rect(
     renderer_t *renderer,
@@ -208,6 +232,14 @@ void destroy_renderer(renderer_t *renderer)
     renderer->texture_count = 0;
 }
 
+SDL_Texture *renderer_handle_to_texture(renderer_t *renderer, texture_handle_t handle)
+{
+    if (!is_in_range(0, (int32_t)renderer->texture_count, handle))
+        return NULL;
+
+    return renderer->textures[handle];
+}
+
 texture_handle_t renderer_load_texture(renderer_t *renderer, const char *filename)
 {
     texture_handle_t texture = INVALID_TEXTURE_HANDLE;
@@ -283,6 +315,43 @@ void renderer_present(renderer_t *renderer)
                         cmd->texture.rotation,
                         NULL,
                         cmd->texture.flip
+                    );
+
+                    break;
+                }
+                // ---- TEXTURE MOD ---------------------------------------------------------------------
+                case REND_CMD_TEXTURE_MOD:
+                {
+                    SDL_Color mod_col = cmd->texture_mod.col; 
+                    
+                    SDL_SetTextureColorMod(
+                        renderer->textures[cmd->texture_mod.handle], 
+                        mod_col.r, mod_col.g, mod_col.b
+                    );
+                    SDL_SetTextureAlphaMod(
+                        renderer->textures[cmd->texture_mod.handle], 
+                        mod_col.a
+                    );
+                    
+                    SDL_RenderCopyEx(
+                        renderer->sdl_renderer,
+                        renderer->textures[cmd->texture_mod.handle],
+                        &cmd->texture_mod.src,
+                        &cmd->texture_mod.dst,
+                        cmd->texture_mod.rotation,
+                        NULL,
+                        cmd->texture_mod.flip
+                    );
+                     
+                    SDL_SetTextureColorMod(
+                        renderer->textures[cmd->texture_mod.handle], 
+                        (uint8_t)(mod_col.r + 255) % 256, 
+                        (uint8_t)(mod_col.g + 255) % 256, 
+                        (uint8_t)(mod_col.b + 255) % 256
+                    );
+                    SDL_SetTextureAlphaMod(
+                        renderer->textures[cmd->texture_mod.handle], 
+                        255
                     );
 
                     break;
@@ -429,6 +498,57 @@ void renderer_draw_texture(
     renderer->command_count[layer] += 1;
 }
 
+void renderer_draw_texture_mod(
+    renderer_t *renderer,
+    render_layer_t layer,
+    texture_handle_t handle,
+    const SDL_Rect *src,
+    const SDL_Rect *dst,
+    double rotation,
+    SDL_RendererFlip flip,
+    SDL_Color col) 
+{
+    if (renderer->command_count[layer] >= MAX_RENDERER_CMDS)
+        return;
+    
+    assert(is_in_range(0, (int32_t)renderer->texture_count, handle) &&
+            "Texture handle out of bounds");
+
+    SDL_Rect src_rect = {0, 0, 0, 0};
+    if (src == NULL)
+    {
+        SDL_QueryTexture(
+            renderer->textures[handle], 
+            NULL, 
+            NULL,
+            &src_rect.w,
+            &src_rect.h
+        );
+    } 
+    else
+        src_rect = *src;
+
+    SDL_Rect dst_rect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+    if (dst != NULL)  
+        dst_rect = *dst;
+
+    renderer->commands[layer][renderer->command_count[layer]] = (renderer_command_t) 
+    {
+        .texture_mod = 
+        {
+            .type = REND_CMD_TEXTURE_MOD,
+            .handle = handle,
+            .src = src_rect,
+            .dst = dst_rect,
+            .rotation = rotation,
+            .flip = flip,
+            .col = col
+        }
+    };
+    renderer->command_count[layer] += 1;
+}
+
+
 // ---- RECT ----------------------------------------------------------------------------
 // if dst is NULL it gets rendered to whole screen
 void renderer_draw_rect(
@@ -527,6 +647,11 @@ void renderer_draw_fighter(renderer_t *renderer, fighter_t *fighter)
     dst.w = frame->src.w; 
     dst.h = frame->src.h;
     
+    //SDL_SetTextureColorMod(
+    //    renderer_handle_to_texture(renderer, fighter->visuals->atlas_tex), 
+    //    0, 0, 0
+    //);
+
     // fighter->visuals.atlas_tex
     renderer_draw_texture(
         renderer, 
@@ -536,7 +661,22 @@ void renderer_draw_fighter(renderer_t *renderer, fighter_t *fighter)
         &dst, 
         0.0, 
         fighter->facing_right ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL
-    ); 
+    );
+    
+    
+    SDL_Rect shadow = dst;
+    shadow.y = FLOOR_Y_LEVEL - 8; 
+    
+    renderer_draw_texture_mod(
+        renderer, 
+        LAYER_ENTITY,
+        fighter->visuals->atlas_tex, 
+        &frame->src,
+        &shadow, 
+        180.0, 
+        fighter->facing_right ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE,
+        (SDL_Color){0, 0, 0, 128}
+    );
 }
 
 #endif /* RENDERER_IMPLEMENTATION */

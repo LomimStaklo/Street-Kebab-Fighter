@@ -11,7 +11,14 @@
 //  DECLARATION
 // =============
 
+// X macro for all playable character 
+#define CHARACTERS_XLIST \
+    X(boke) \
+//    X(adem)
+
 extern const fighter_t fajter_boke;
+
+const fighter_t *load_character(renderer_t *renderer, const char *fajter_name);
 bool load_all_characters(renderer_t *renderer);
 
 // ================
@@ -34,22 +41,28 @@ bool load_all_characters(renderer_t *renderer);
       .frame_count = (sizeof((anim_frame_t[]){__VA_ARGS__}) / sizeof(anim_frame_t)) }
 
 #define FRAME_HURT(src_r, offx, offy, hx, hy, hw, hh) \
-    { .src = (src_r), .offset_x = (offx), .offset_y = (offy), \
+    { .src = src_r, .offset_x = (offx), .offset_y = (offy), \
       .hurtboxs[0] = {(hx), (hy), (hw), (hh)}, .count_hurtboxs = 1 }
 
 #define FRAME_HIT(src_r, offx, offy, hurtx, hurty, hurtw, hurth, hitx, hity, hitw, hith) \
-    { .src = (src_r), .offset_x = (offx), .offset_y = (offy), \
+    { .src = src_r, .offset_x = (offx), .offset_y = (offy), \
       .hurtboxs[0] = {(hurtx), (hurty), (hurtw), (hurth)}, .count_hurtboxs = 1, \
       .hitboxs[0]  = {(hitx),  (hity),  (hitw),  (hith)},  .count_hitboxs  = 1 }
+ 
+/**
+ * Starting point of 48 by 96 frames in a atlas
+ * The atlas is divided in different regions sorted by tile size
+ * 48x96 start at origin of (0, 0)
+ * \returns Rectangle (SDL_Rect) of the tile in a atlas 
+ */
+#define TILE_48x96(idx) tile_from_atlas_xy(idx, 0, 0,   48, 96, 21)
+#define TILE_64x96(idx) tile_from_atlas_xy(idx, 0, 96,  64, 96, 16)
+#define TILE_96x96(idx) tile_from_atlas_xy(idx, 0, 288, 96, 96, 10)
 
-// X macro for all playable character 
-#define CHARACTERS_XLIST \
-    X(boke) \
-//    X(adem) 
 
 static fighter_visuals_t visuals_boke =
 {
-    .atlas_tex = INVALID_TEXTURE_HANDLE,
+    .atlas_tex  = INVALID_TEXTURE_HANDLE,
     .animations = 
     {    
         /* ANIM(frame_duration, loop, startup_frames, active_frames, frame_data(src, x, y, w, h)) */
@@ -95,10 +108,10 @@ static fighter_visuals_t visuals_boke =
             FRAME_HURT(TILE_48x96(16), 24, 88,  20, 16, 24, 68)
         ), // 20, 16, 24, 68
 
-
-        [ANIM_AIRBORNE] = ANIM(0.20f, false,
-            FRAME_HURT(TILE_48x96(17), 24, 88,  8, 48, 36, 36),
-            FRAME_HURT(TILE_48x96(18), 24, 88,  8, 48, 36, 36)
+        [ANIM_AIRBORNE] = ANIM(0.10f, false,
+            FRAME_HURT(TILE_48x96(17), 24, 88,  8, 40, 36, 44),
+            FRAME_HURT(TILE_48x96(18), 24, 88,  8, 40, 36, 44),
+            FRAME_HURT(TILE_48x96(19), 24, 88,  8, 40, 36, 44)
         ),
         
         // ---- SIZE 64x96 ---------------------------------------------------
@@ -114,7 +127,7 @@ static fighter_visuals_t visuals_boke =
 
         [ANIM_STAND_MEDIUM] = ANIM_ATK(0.15f, false, 1, 1,
             FRAME_HURT(TILE_64x96(4), 24, 88,  24, 12, 24, 72),
-            FRAME_HIT (TILE_64x96(5),  8, 88,   8, 12, 24, 72,  32, 24, 32, 32),
+            FRAME_HIT (TILE_64x96(5), 24, 88,   8, 12, 24, 72,  32, 24, 32, 24),
         ),
         
         [ANIM_CROUCH_MEDIUM] = ANIM_ATK(0.15f, false, 1, 1,
@@ -122,18 +135,40 @@ static fighter_visuals_t visuals_boke =
             FRAME_HIT (TILE_64x96(7),  8, 88,   8, 48, 36, 36,  32, 56, 32, 8),
         ),
         
-        [ANIM_STAND_HEAVY] = ANIM_ATK(0.20f, false, 2, 1,
+        [ANIM_STAND_HEAVY] = ANIM_ATK(0.11f, false, 2, 1,
             FRAME_HURT(TILE_64x96(8),  24, 88,  24, 12, 24, 72),
             FRAME_HURT(TILE_64x96(9),  24, 88,  24, 12, 24, 72),
             FRAME_HIT (TILE_64x96(10),  8, 88,   8, 12, 24, 72,  32, 24, 32, 32),
         ),
         
-        [ANIM_CROUCH_HEAVY] = ANIM_ATK(0.20f, false, 3, 1,
+        [ANIM_CROUCH_HEAVY] = ANIM_ATK(0.10f, false, 3, 1,
             FRAME_HURT(TILE_64x96(11), 24, 88,  8, 48, 36, 36),
             FRAME_HURT(TILE_64x96(12), 24, 88,  8, 48, 36, 36),
             FRAME_HURT(TILE_64x96(13), 24, 88,  8, 48, 36, 36),
             FRAME_HIT (TILE_64x96(14),  8, 88,  8, 48, 36, 36,  32, 56, 40, 16),
         ),
+        [ANIM_AIRBORNE_ATK] = ANIM_ATK(0.20f, false, 1, 1,
+            FRAME_HURT(TILE_64x96(15), 24, 64,  8, 32, 44, 44),
+            FRAME_HIT (TILE_64x96(15), 24, 64,  8, 32, 44, 44,  32, 64, 40, 32),
+        ),
+        // ---- 2. ROW -----------------------------------------------------
+        [ANIM_KNOCKDOWN] = ANIM(0.10f, false,
+            FRAME_HURT(TILE_64x96(21),  24, 88,  0, 0, 0, 0),
+            FRAME_HURT(TILE_64x96(22),  24, 78,  0, 0, 0, 0),
+            FRAME_HURT(TILE_64x96(23),  24, 80,  0, 0, 0, 0),
+            FRAME_HURT(TILE_64x96(25),  24, 88,  0, 0, 0, 0),
+        ),
+        [ANIM_RECOVERY] = ANIM(0.10f, false, 
+            FRAME_HURT(TILE_64x96(25), 24, 88,  0, 0, 0, 0),
+            FRAME_HURT(TILE_48x96(10), 24, 88,  0, 0, 0, 0),
+            FRAME_HURT(TILE_48x96(4),  24, 88,  0, 0, 0, 0),
+        ),
+
+        // ---- SIZE 96x96 -------------------------------------------------
+        [ANIM_VICTORY] = ANIM(0.50f, true,
+            FRAME_HURT(TILE_96x96(0), 24, 88,   0, 0, 0, 0),
+            FRAME_HURT(TILE_96x96(1), 24, 88,   0, 0, 0, 0),
+        )
     } 
 };
 
@@ -153,12 +188,13 @@ const fighter_t fajter_boke =
     {
         [ATK_ID_STAND_LIGHT] = 
         {
+            .animation_id = ANIM_STAND_LIGHT,
+
             .damage = 10,
             .stun_duration = 0.1f,
-            .knockback_x   = 50.0f, .knockback_y = 0.0f,
-            .recoil_x      = 10.0f,  .recoil_y    = 0.0f,
+            .knockback_x   = 10.0f, .knockback_y = 0.0f,
+            .recoil_x      = 100.0f,  .recoil_y = 0.0f,
             
-            .animation_id = ANIM_STAND_LIGHT,
             .triger       = ATK_TRIGGER_ON_HIT,
             .flags        = ATK_FLAG_NONE,
             .func = NULL, 
@@ -166,12 +202,13 @@ const fighter_t fajter_boke =
         },
         [ATK_ID_STAND_MEDIUM] = 
         {
-            .damage = 15, 
-            .stun_duration = 0.3f,
-            .knockback_x   = 20.0f, .knockback_y = 0.0f,
-            .recoil_x      = 0.0f,  .recoil_y    = 0.0f,
-            
             .animation_id = ANIM_STAND_MEDIUM,
+            
+            .damage = 15, 
+            .stun_duration = 0.15f,
+            .knockback_x   = 20.0f, .knockback_y = 0.0f,
+            .recoil_x      = 150.0f,  .recoil_y = 0.0f,
+            
             .triger       = ATK_TRIGGER_ON_HIT,
             .flags        = ATK_FLAG_NONE,
             .func = NULL, 
@@ -179,12 +216,13 @@ const fighter_t fajter_boke =
         },
         [ATK_ID_STAND_HEAVY] = 
         {
+            .animation_id = ANIM_STAND_HEAVY,
+            
             .damage = 25, 
             .stun_duration = 1.0f,
-            .knockback_x   = 20.0f, .knockback_y = 0.0f,
+            .knockback_x   = 300.0f, .knockback_y = 100.0f,
             .recoil_x      = 0.0f,  .recoil_y    = 0.0f,
         
-            .animation_id = ANIM_STAND_HEAVY,
             .triger       = ATK_TRIGGER_ON_HIT,
             .flags        = ATK_FLAG_KNOCKDOWN,
             .func = NULL, 
@@ -192,12 +230,13 @@ const fighter_t fajter_boke =
         },
         [ATK_ID_CROUCH_LIGHT] = 
         {
+            .animation_id = ANIM_CROUCH_LIGHT,
+
             .damage = 10,
             .stun_duration = 0.1f,
             .knockback_x   = 50.0f, .knockback_y = 0.0f,
-            .recoil_x      = 0.0f,  .recoil_y    = 0.0f,
+            .recoil_x      = 100.0f,  .recoil_y = 0.0f,
         
-            .animation_id = ANIM_CROUCH_LIGHT,
             .triger       = ATK_TRIGGER_ON_HIT,
             .flags        = ATK_FLAG_NONE,
             .func = NULL, 
@@ -205,12 +244,13 @@ const fighter_t fajter_boke =
         },
         [ATK_ID_CROUCH_MEDIUM] = 
         {
+            .animation_id = ANIM_CROUCH_MEDIUM,
+
             .damage = 15,
             .stun_duration = 0.3f,
             .knockback_x   = 50.0f, .knockback_y = 0.0f,
-            .recoil_x      = 0.0f,  .recoil_y    = 0.0f,
+            .recoil_x      = 200.0f,  .recoil_y = 0.0f,
             
-            .animation_id = ANIM_CROUCH_MEDIUM,
             .triger       = ATK_TRIGGER_ON_HIT,
             .flags        = ATK_FLAG_NONE,
             .func = NULL, 
@@ -219,17 +259,33 @@ const fighter_t fajter_boke =
 
         [ATK_ID_CROUCH_HEAVY] = 
         {
+            .animation_id = ANIM_CROUCH_HEAVY,
+            
             .damage = 25, 
             .stun_duration = 1.0f,
             .knockback_x   = 100.0f, .knockback_y = 0.0f,
-            .recoil_x      = 0.0f,  .recoil_y    = 0.0f,
+            .recoil_x      = 0.0f,  .recoil_y     = 0.0f,
             
-            .animation_id = ANIM_CROUCH_HEAVY,
             .triger       = ATK_TRIGGER_ON_HIT,
-            .flags        = ATK_FLAG_KNOCKDOWN,
+            .flags        = ATK_FLAG_KNOCKDOWN | ATK_FLAG_CANT_BLOCK_STANDING,
             .func = NULL, 
             .sequence = {{0}, 0}
         },
+        [ATK_ID_AIRBORNE_ATK] = 
+        {
+            .animation_id = ANIM_AIRBORNE_ATK,
+            
+            .damage = 10, 
+            .stun_duration = 1.0f,
+            .knockback_x   = 200.0f, .knockback_y = 0.0f,
+            .recoil_x      = 200.0f,   .recoil_y     = 0.0f,
+            
+            .triger       = ATK_TRIGGER_ON_HIT,
+            .flags        = ATK_FLAG_KNOCKDOWN | ATK_FLAG_CANT_BLOCK_CROUCHING,
+            .func = NULL, 
+            .sequence = {{0}, 0}
+        },
+        
     }
 };
 

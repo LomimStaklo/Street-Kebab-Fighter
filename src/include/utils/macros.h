@@ -53,13 +53,4 @@
         (tile_h)                                                                   \
     }
 
-/**
- * Starting point of 48 by 96 frames in a atlas
- * The atlas is divided in different regions sorted by tile size
- * 48x96 start at origin of (0, 0)
- * \returns Rectangle (SDL_Rect) of the tile in a atlas 
- */
-#define TILE_48x96(idx) (SDL_Rect) tile_from_atlas_xy(idx, 0, 0, 48, 96, 21)
-#define TILE_64x96(idx) (SDL_Rect) tile_from_atlas_xy(idx, 0, 96, 64, 96, 16)
-
 #endif /* !_MACROS_H */

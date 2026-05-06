@@ -95,9 +95,11 @@ typedef struct player_t
     float           input_timer; // Timestamp of the newest input
 } player_t;
 
-// bool init_players(player_t player[2], input_t *input);
+bool init_players(player_t player[2], input_t *input);
 input_actions_t player_get_input(player_t *player);  // Gets the input bitflags  
+input_actions_t input_left_right_swap(bool is_facing_right, input_actions_t in);
 void player_record_input(player_t *player, float delta_time);
+bool player_check_combo(player_t *player, const input_sequence_t *seq);
 
 // ================
 //  IMPLEMENTATION

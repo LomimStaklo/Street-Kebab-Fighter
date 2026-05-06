@@ -4,8 +4,9 @@
 #define CHARACTERS_IMPLEMENTATION
 #define FAJTER_IMPLEMENTATION
 #define FONT_ATLAS_IMPLEMENTATION
-#define ASSETMNGR_IMPLEMENTATION
+#define MATCH_IMPLEMENTATION
 #include "font_atlas.h"
+#include "match.h"
 #include "game.h"
 
 #include <utils/loging.h>
