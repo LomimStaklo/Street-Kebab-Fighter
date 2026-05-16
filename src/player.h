@@ -1,9 +1,9 @@
-#ifndef _INPUT_H
-#define _INPUT_H
+#ifndef _PLAYER_H
+#define _PLAYER_H 
 
 // Header only file! 
 // For implementation you will need to define:
-// #define INPUT_IMPLEMENTATION
+// #define PLAYER_IMPLEMENTATION
 
 #include <SDL2/SDL.h>
 #include <stdbool.h>
@@ -105,7 +105,7 @@ bool player_check_combo(player_t *player, const input_sequence_t *seq);
 //  IMPLEMENTATION
 // ================
 
-#ifdef INPUT_IMPLEMENTATION
+#ifdef PLAYER_IMPLEMENTATION
 
 #include <utils/macros.h>
 
@@ -132,7 +132,7 @@ bool player_check_combo(player_t *player, const input_sequence_t *seq)
     int32_t history_len      = lenghtof(player->input_history);
     int32_t seq_step         = seq->count - 1;        // Start from the LAST step of sequence
     float newest_time        = player->input_timer;   // Newest input time
-    const float COMBO_WINDOW = 0.50f;                  // Max seconds between each input in the sequence
+    const float COMBO_WINDOW = 0.55f;                  // Max seconds between each input in the sequence
     // The combo depends on fighters facing direction
     const bool do_swap = player->fighter.facing_right; 
 
@@ -208,9 +208,9 @@ bool init_players(player_t player[2], input_t *input)
         SDL_SCANCODE_DOWN,
         SDL_SCANCODE_RIGHT,
         SDL_SCANCODE_LEFT,
-        SDL_SCANCODE_I,
-        SDL_SCANCODE_O,
-        SDL_SCANCODE_P,
+        SDL_SCANCODE_COMMA,
+        SDL_SCANCODE_PERIOD,
+        SDL_SCANCODE_SLASH,
     };
     if (lenghtof(keys_p1) != (BUTTON_COUNT) || 
         lenghtof(keys_p2) != (BUTTON_COUNT))
@@ -227,6 +227,6 @@ bool init_players(player_t player[2], input_t *input)
     return true;
 }
 
-#endif /* INPUT_IMPLEMENTATION */
+#endif /* PLAYER_IMPLEMENTATION */
 
-#endif /* !_INPUT_H */
+#endif /* !_PLAYER_H */

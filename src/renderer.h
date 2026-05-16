@@ -663,9 +663,9 @@ void renderer_draw_fighter(renderer_t *renderer, fighter_t *fighter)
         fighter->facing_right ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL
     );
     
-    
     SDL_Rect shadow = dst;
-    shadow.y = FLOOR_Y_LEVEL - 8; 
+    shadow.y = FLOOR_Y_LEVEL - 8;
+    shadow.h -= SDL_clamp((FLOOR_Y_LEVEL - (int32_t)fighter->position_y), 0, 40); 
     
     renderer_draw_texture_mod(
         renderer, 

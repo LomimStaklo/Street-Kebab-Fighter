@@ -1,10 +1,12 @@
-#define INPUT_IMPLEMENTATION
+#define PLAYER_IMPLEMENTATION
+#define STATE_IMPLEMENTATION
 #define PLAY_STATE_IMPLEMENTATION
 #define RENDERER_IMPLEMENTATION
 #define CHARACTERS_IMPLEMENTATION
 #define FAJTER_IMPLEMENTATION
 #define FONT_ATLAS_IMPLEMENTATION
 #define MATCH_IMPLEMENTATION
+#include "state.h"
 #include "font_atlas.h"
 #include "match.h"
 #include "game.h"

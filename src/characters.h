@@ -11,10 +11,11 @@
 //  DECLARATION
 // =============
 
+
 // X macro for all playable character 
 #define CHARACTERS_XLIST \
-    X(boke) \
-//    X(adem)
+X(boke) \
+// ----------------------------------
 
 extern const fighter_t fajter_boke;
 
@@ -43,6 +44,9 @@ bool load_all_characters(renderer_t *renderer);
 #define FRAME_HURT(src_r, offx, offy, hx, hy, hw, hh) \
     { .src = src_r, .offset_x = (offx), .offset_y = (offy), \
       .hurtboxs[0] = {(hx), (hy), (hw), (hh)}, .count_hurtboxs = 1 }
+
+#define FRAME_IMMUNE(src_r, offx, offy) \
+    { .src = src_r, .offset_x = (offx), .offset_y = (offy) }
 
 #define FRAME_HIT(src_r, offx, offy, hurtx, hurty, hurtw, hurth, hitx, hity, hitw, hith) \
     { .src = src_r, .offset_x = (offx), .offset_y = (offy), \
@@ -113,6 +117,10 @@ static fighter_visuals_t visuals_boke =
             FRAME_HURT(TILE_48x96(18), 24, 88,  8, 40, 36, 44),
             FRAME_HURT(TILE_48x96(19), 24, 88,  8, 40, 36, 44)
         ),
+
+        [ANIM_AIRBORNE_HITSTUN] = ANIM(0.10f, false,
+            FRAME_HURT(TILE_48x96(20), 24, 88,  8, 40, 36, 44)
+        ),
         
         // ---- SIZE 64x96 ---------------------------------------------------
         [ANIM_STAND_LIGHT] = ANIM_ATK(0.10f, false, 1, 1,
@@ -135,7 +143,7 @@ static fighter_visuals_t visuals_boke =
             FRAME_HIT (TILE_64x96(7),  8, 88,   8, 48, 36, 36,  32, 56, 32, 8),
         ),
         
-        [ANIM_STAND_HEAVY] = ANIM_ATK(0.11f, false, 2, 1,
+        [ANIM_STAND_HEAVY] = ANIM_ATK(0.13f, false, 2, 1,
             FRAME_HURT(TILE_64x96(8),  24, 88,  24, 12, 24, 72),
             FRAME_HURT(TILE_64x96(9),  24, 88,  24, 12, 24, 72),
             FRAME_HIT (TILE_64x96(10),  8, 88,   8, 12, 24, 72,  32, 24, 32, 32),
@@ -147,27 +155,45 @@ static fighter_visuals_t visuals_boke =
             FRAME_HURT(TILE_64x96(13), 24, 88,  8, 48, 36, 36),
             FRAME_HIT (TILE_64x96(14),  8, 88,  8, 48, 36, 36,  32, 56, 40, 16),
         ),
-        [ANIM_AIRBORNE_ATK] = ANIM_ATK(0.20f, false, 1, 1,
+        [ANIM_AIRBORNE_ATK] = ANIM_ATK(0.25f, false, 1, 1,
             FRAME_HURT(TILE_64x96(15), 24, 64,  8, 32, 44, 44),
-            FRAME_HIT (TILE_64x96(15), 24, 64,  8, 32, 44, 44,  32, 64, 40, 32),
+            FRAME_HIT (TILE_64x96(15), 24, 64,  8, 32, 44, 44,  24, 64, 40, 32),
         ),
+
         // ---- 2. ROW -----------------------------------------------------
-        [ANIM_KNOCKDOWN] = ANIM(0.10f, false,
-            FRAME_HURT(TILE_64x96(21),  24, 88,  0, 0, 0, 0),
-            FRAME_HURT(TILE_64x96(22),  24, 78,  0, 0, 0, 0),
-            FRAME_HURT(TILE_64x96(23),  24, 80,  0, 0, 0, 0),
-            FRAME_HURT(TILE_64x96(25),  24, 88,  0, 0, 0, 0),
+        [ANIM_KNOCKDOWN] = ANIM(0.11f, false,
+            FRAME_IMMUNE(TILE_64x96(16),  32, 88),
+            FRAME_IMMUNE(TILE_64x96(17),  32, 78),
+            FRAME_IMMUNE(TILE_64x96(18),  32, 80),
+            FRAME_IMMUNE(TILE_64x96(19),  32, 88),
         ),
         [ANIM_RECOVERY] = ANIM(0.10f, false, 
-            FRAME_HURT(TILE_64x96(25), 24, 88,  0, 0, 0, 0),
-            FRAME_HURT(TILE_48x96(10), 24, 88,  0, 0, 0, 0),
-            FRAME_HURT(TILE_48x96(4),  24, 88,  0, 0, 0, 0),
+            FRAME_IMMUNE(TILE_64x96(19), 32, 88),
+            FRAME_IMMUNE(TILE_48x96(10), 24, 88),
+            FRAME_IMMUNE(TILE_48x96(4),  24, 88),
+        ),
+
+        // This animation is the same as: ANIM_WALK_BACKWARD
+        [ANIM_DASH_BACKWARD] = ANIM(0.10f, false, 
+            FRAME_HURT(TILE_48x96(11), 32, 88,  8, 16, 24, 68),
+            FRAME_HURT(TILE_48x96(12), 32, 88,  8, 16, 24, 68),
+        ),
+
+        [ANIM_DASH_FORWARD] = ANIM(0.10f, false, 
+            FRAME_HURT(TILE_64x96(20), 24, 88,  0, 24, 6*8, 8*7),
+            FRAME_HURT(TILE_64x96(21), 24, 88,  0, 24, 6*8, 8*7),
+        ),
+
+        [ANIM_COMBO1] = ANIM_ATK(0.19f, false, 2, 1,
+            FRAME_HURT(TILE_64x96(22), 16, 88,  24, 24, 8*3, 8*8),
+            FRAME_HURT(TILE_64x96(23), 16, 88,  24, 24, 8*3, 8*8),
+            FRAME_HIT (TILE_64x96(24), 16, 88,  24, 24, 8*3, 8*8,  8*5, 8, 32, 24),
         ),
 
         // ---- SIZE 96x96 -------------------------------------------------
-        [ANIM_VICTORY] = ANIM(0.50f, true,
-            FRAME_HURT(TILE_96x96(0), 24, 88,   0, 0, 0, 0),
-            FRAME_HURT(TILE_96x96(1), 24, 88,   0, 0, 0, 0),
+        [ANIM_POSE_VICTORY] = ANIM(0.50f, true,
+            FRAME_IMMUNE(TILE_96x96(0), 48, 88),
+            FRAME_IMMUNE(TILE_96x96(1), 48, 88),
         )
     } 
 };
@@ -188,104 +214,80 @@ const fighter_t fajter_boke =
     {
         [ATK_ID_STAND_LIGHT] = 
         {
-            .animation_id = ANIM_STAND_LIGHT,
-
             .damage = 10,
             .stun_duration = 0.1f,
-            .knockback_x   = 10.0f, .knockback_y = 0.0f,
-            .recoil_x      = 100.0f,  .recoil_y = 0.0f,
+            .knockback_x   = 10.0f,
+            .recoil_x      = 100.0f, 
             
-            .triger       = ATK_TRIGGER_ON_HIT,
-            .flags        = ATK_FLAG_NONE,
-            .func = NULL, 
-            .sequence = {{0}, 0}
+            .triger = ATK_TRIGGER_ON_HIT,
+            .flags  = ATK_FLAG_CANCEABLE
         },
         [ATK_ID_STAND_MEDIUM] = 
         {
-            .animation_id = ANIM_STAND_MEDIUM,
-            
             .damage = 15, 
             .stun_duration = 0.15f,
-            .knockback_x   = 20.0f, .knockback_y = 0.0f,
-            .recoil_x      = 150.0f,  .recoil_y = 0.0f,
+            .knockback_x   = 20.0f, 
+            .recoil_x      = 150.0f,
             
-            .triger       = ATK_TRIGGER_ON_HIT,
-            .flags        = ATK_FLAG_NONE,
-            .func = NULL, 
-            .sequence = {{0}, 0}
+            .triger = ATK_TRIGGER_ON_HIT,
         },
         [ATK_ID_STAND_HEAVY] = 
         {
-            .animation_id = ANIM_STAND_HEAVY,
-            
             .damage = 25, 
             .stun_duration = 1.0f,
-            .knockback_x   = 300.0f, .knockback_y = 100.0f,
-            .recoil_x      = 0.0f,  .recoil_y    = 0.0f,
+            .knockback_x   = 300.0f, .knockback_y = -100.0f,
         
-            .triger       = ATK_TRIGGER_ON_HIT,
-            .flags        = ATK_FLAG_KNOCKDOWN,
-            .func = NULL, 
-            .sequence = {{0}, 0}
+            .triger = ATK_TRIGGER_ON_HIT,
+            .flags  = ATK_FLAG_KNOCKDOWN,
         },
         [ATK_ID_CROUCH_LIGHT] = 
         {
-            .animation_id = ANIM_CROUCH_LIGHT,
-
             .damage = 10,
             .stun_duration = 0.1f,
-            .knockback_x   = 50.0f, .knockback_y = 0.0f,
-            .recoil_x      = 100.0f,  .recoil_y = 0.0f,
+            .knockback_x   = 50.0f,  
+            .recoil_x      = 100.0f,
         
-            .triger       = ATK_TRIGGER_ON_HIT,
-            .flags        = ATK_FLAG_NONE,
-            .func = NULL, 
-            .sequence = {{0}, 0}
+            .triger = ATK_TRIGGER_ON_HIT,
         },
         [ATK_ID_CROUCH_MEDIUM] = 
         {
-            .animation_id = ANIM_CROUCH_MEDIUM,
-
             .damage = 15,
             .stun_duration = 0.3f,
-            .knockback_x   = 50.0f, .knockback_y = 0.0f,
-            .recoil_x      = 200.0f,  .recoil_y = 0.0f,
+            .knockback_x   = 50.0f, 
+            .recoil_x      = 200.0f, 
             
-            .triger       = ATK_TRIGGER_ON_HIT,
-            .flags        = ATK_FLAG_NONE,
-            .func = NULL, 
-            .sequence = {{0}, 0}
+            .triger = ATK_TRIGGER_ON_HIT,
         },
 
         [ATK_ID_CROUCH_HEAVY] = 
         {
-            .animation_id = ANIM_CROUCH_HEAVY,
-            
             .damage = 25, 
             .stun_duration = 1.0f,
-            .knockback_x   = 100.0f, .knockback_y = 0.0f,
-            .recoil_x      = 0.0f,  .recoil_y     = 0.0f,
+            .knockback_x   = 100.0f, 
             
-            .triger       = ATK_TRIGGER_ON_HIT,
-            .flags        = ATK_FLAG_KNOCKDOWN | ATK_FLAG_CANT_BLOCK_STANDING,
-            .func = NULL, 
-            .sequence = {{0}, 0}
+            .triger = ATK_TRIGGER_ON_HIT,
+            .flags  = ATK_FLAG_KNOCKDOWN | ATK_FLAG_CANT_BLOCK_STANDING,
         },
         [ATK_ID_AIRBORNE_ATK] = 
         {
-            .animation_id = ANIM_AIRBORNE_ATK,
-            
             .damage = 10, 
             .stun_duration = 1.0f,
-            .knockback_x   = 200.0f, .knockback_y = 0.0f,
-            .recoil_x      = 200.0f,   .recoil_y     = 0.0f,
+            .knockback_x   = 200.0f, .knockback_y = 50.0f,
+            .recoil_x      = 200.0f,
             
-            .triger       = ATK_TRIGGER_ON_HIT,
-            .flags        = ATK_FLAG_KNOCKDOWN | ATK_FLAG_CANT_BLOCK_CROUCHING,
-            .func = NULL, 
-            .sequence = {{0}, 0}
+            .triger = ATK_TRIGGER_ON_HIT,
+            .flags  = ATK_FLAG_KNOCKDOWN | ATK_FLAG_CANT_BLOCK_CROUCHING,
         },
-        
+        [ATK_ID_COMBO1] = 
+        {
+            .damage = 55, 
+            .stun_duration = 1.0f,
+            .knockback_x = 100.0f, .knockback_y = -200.0f,
+            
+            .triger = ATK_TRIGGER_ON_HIT,
+            .flags  = ATK_FLAG_KNOCKDOWN,
+            .sequence = {{INPUT_HOLDING_DOWN, INPUT_PRESSED_RIGHT, INPUT_PRESSED_LIGHT}, 3}
+        },
     }
 };
 
@@ -293,26 +295,26 @@ const fighter_t fajter_boke =
 const fighter_t *load_character(renderer_t *renderer, const char *fajter_name)
 {
     const fighter_t *fighter = NULL;
-    #define X(name) \
-        if ((strcmp(#name, fajter_name) == 0)) {  \
-            visuals_ ## name.atlas_tex = renderer_load_texture(renderer, IMAGE_PATH("atlas_"#name".png")); \
-            if (visuals_ ## name.atlas_tex == INVALID_TEXTURE_HANDLE) return fighter; \
-            fighter = &fajter_ ## name;}
+#define X(name) \
+    if ((strcmp(#name, fajter_name) == 0)) {  \
+        visuals_ ## name.atlas_tex = renderer_load_texture(renderer, IMAGE_PATH("atlas_"#name".png")); \
+        if (visuals_ ## name.atlas_tex == INVALID_TEXTURE_HANDLE) return NULL; \
+        fighter = &fajter_ ## name;}
 
-        CHARACTERS_XLIST
-    #undef X
+    CHARACTERS_XLIST
+#undef X
 
     return fighter;
 }
 
 bool load_all_characters(renderer_t *renderer)
 {
-    #define X(name) \
-        visuals_ ## name.atlas_tex = renderer_load_texture(renderer, IMAGE_PATH("atlas_"#name".png")); \
-        if (visuals_ ## name.atlas_tex == INVALID_TEXTURE_HANDLE) return false;
+#define X(name) \
+    visuals_ ## name.atlas_tex = renderer_load_texture(renderer, IMAGE_PATH("atlas_"#name".png")); \
+    if (visuals_ ## name.atlas_tex == INVALID_TEXTURE_HANDLE) return false;
         
-        CHARACTERS_XLIST
-    #undef X
+    CHARACTERS_XLIST
+#undef X
 
     return true;
 }

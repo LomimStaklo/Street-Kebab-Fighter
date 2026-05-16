@@ -4,8 +4,7 @@
 #include <SDL2/SDL.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "play_state.h"
-#include "input.h"
+#include "player.h"
 #include "renderer.h"
 
 typedef struct game_time_t
@@ -24,7 +23,6 @@ typedef struct game_t
     game_time_t time;
     
     SDL_Window *window;
-    play_state_t play_state;
     player_t players[2];
 
     bool running;
