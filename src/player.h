@@ -208,9 +208,9 @@ bool init_players(player_t player[2], input_t *input)
         SDL_SCANCODE_DOWN,
         SDL_SCANCODE_RIGHT,
         SDL_SCANCODE_LEFT,
-        SDL_SCANCODE_COMMA,
-        SDL_SCANCODE_PERIOD,
-        SDL_SCANCODE_SLASH,
+        SDL_SCANCODE_I,
+        SDL_SCANCODE_O,
+        SDL_SCANCODE_P,
     };
     if (lenghtof(keys_p1) != (BUTTON_COUNT) || 
         lenghtof(keys_p2) != (BUTTON_COUNT))
